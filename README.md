@@ -53,19 +53,19 @@ python3 painel.py
 
 ### 📦 Gerando um AppImage (programa portátil para Linux)
 
-## Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências.
-# ▶️ Como gerar:
+### Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências.
+## ▶️ Como gerar:
 
-#   1. Certifique-se de que seu ambiente virtual já está criado e ativado.
+##   1. Certifique-se de que seu ambiente virtual já está criado e ativado.
 
-#   2. Execute o script:
+##   2. Execute o script:
 
-        ```bash
-            chmod +x Criar-AppImage.sh
-            ./Criar-AppImage.sh
-        ```
+```bash
+    chmod +x Criar-AppImage.sh
+    ./Criar-AppImage.sh
+```
         
-## ✅ O que o script faz:
+### ✅ O que o script faz:
 
     * Cria a estrutura AppDir/ para empacotamento
 
@@ -75,14 +75,14 @@ python3 painel.py
 
     * Utiliza o appimagetool para gerar um arquivo .AppImage
 
-## 📦 Resultado final:
+### 📦 Resultado final:
 
 Você terá um único arquivo [.AppImage] executável e portátil, compatível com qualquer distribuição Linux moderna.
 
-## 📄 Licença
+### 📄 Licença
 
 Este projeto é gratuito para uso pessoal, educacional e pode ser modificado livremente.
-## 🙋 Autor
+### 🙋 Autor
 
 Desenvolvido por [FernandoGabrielSilva].
 
