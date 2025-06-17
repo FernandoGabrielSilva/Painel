@@ -58,11 +58,18 @@ Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer 
 
 ##   1. Certifique-se de que seu ambiente virtual já está criado e ativado.
 
+Se não estiver criado e ativado execulte esse codigo.
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
 ##   2. Execute o script:
 
 ```bash
-    chmod +x Criar-AppImage.sh
-    ./Criar-AppImage.sh
+chmod +x Criar-AppImage.sh
+./Criar-AppImage.sh
 ```
         
 ### ✅ O que o script faz:
