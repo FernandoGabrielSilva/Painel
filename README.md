@@ -53,7 +53,7 @@ python3 painel.py
 
 ### 📦 Gerando um AppImage (programa portátil para Linux)
 
-### Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências.
+Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências.
 ## ▶️ Como gerar:
 
 ##   1. Certifique-se de que seu ambiente virtual já está criado e ativado.
