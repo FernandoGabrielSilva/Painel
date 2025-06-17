@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Painel
+Exec=painel.py
+Icon=app
+Type=Application
+Categories=Utility;
+Terminal=true
+
