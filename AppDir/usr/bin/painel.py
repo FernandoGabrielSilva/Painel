@@ -123,6 +123,7 @@ def configurar_fsck():
         echo "❌ GRUB não detectado."
         return 1
       fi
+      echo "Editando GRUB..."
       if grep -q "^GRUB_CMDLINE_LINUX_DEFAULT=" "$GRUB_FILE"; then
         sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ $FORCE_FSCK_ARGS\"/" "$GRUB_FILE"
       else
@@ -135,6 +136,7 @@ def configurar_fsck():
 
     editar_kernelstub() {
       if command -v kernelstub &>/dev/null; then
+        echo "Editando Kernelstub..."
         kernelstub -a "$FORCE_FSCK_ARGS"
         echo "✅ kernelstub configurado."
         return 0
@@ -148,12 +150,16 @@ def configurar_fsck():
 
 def configurar_fish():
     script = '''
+    echo "Detectando package manager..."
     detect_package_manager() {
       for pm in pacman apt dnf zypper; do
         if command -v $pm &>/dev/null; then echo $pm; return; fi
       done
       echo "unknown"
     }
+    
+    echo "Instalando Starship, Eza, Zoxide e Fish..."
+    
     install_packages() {
       case $1 in
         pacman) sudo pacman -Sy --needed starship eza zoxide fish ;;
@@ -179,12 +185,16 @@ def configurar_fish():
 
 def instalar_wine():
     script = '''
+    echo "Detectando package manager..."
     detect_pm() {
       for pm in apt pacman dnf zypper; do
         if command -v $pm &>/dev/null; then echo $pm; return; fi
       done
       echo "unsupported"
     }
+    
+    echo "Instalando Wine..."
+    
     install_wine() {
       case "$1" in
         apt) sudo apt update && sudo apt install -y wine ;;
@@ -199,8 +209,10 @@ def instalar_wine():
       PM=$(detect_pm)
       install_wine "$PM"
     fi
+    echo "Execultando Winecfg..."
     winecfg
     mkdir -p ~/.local/share/applications
+    echo "Criando Atalho..."
     cat > ~/.local/share/applications/wine-exe.desktop <<EOF
 [Desktop Entry]
 Name=Wine Windows Program Loader
@@ -209,6 +221,7 @@ Type=Application
 MimeType=application/x-ms-dos-executable;
 Terminal=false
 EOF
+    echo "Atualizando Aplications..."
     xdg-mime default wine-exe.desktop application/x-ms-dos-executable
     echo "✅ Wine instalado e arquivos .exe associados!"
     '''
@@ -216,6 +229,7 @@ EOF
 
 def criar_atalho_desinstalador_wine():
     script = '''
+    echo "Criando Atalho..."
     cat > ~/.local/share/applications/wine-uninstaller.desktop <<EOF
 [Desktop Entry]
 Name=Desinstalador do Wine
@@ -225,8 +239,65 @@ Terminal=false
 Type=Application
 Categories=Utility;
 EOF
+    echo "Atualizando Aplications..."
     update-desktop-database ~/.local/share/applications
     echo "✅ Atalho para desinstalador criado!"
+    '''
+    executar_como_root(script)
+    
+def instalar_steam():
+    script = '''
+    echo "Detectando package manager..."
+    detect_pm() {
+      for pm in apt pacman dnf zypper; do
+        if command -v $pm &>/dev/null; then echo $pm; return; fi
+      done
+      echo "unsupported"
+    }
+    
+    echo "Instalando Steam.."
+    
+    install_steam() {
+      case "$1" in
+        apt) sudo apt update && sudo apt install -y steam ;;
+        pacman) sudo pacman -Sy --noconfirm steam ;;
+        dnf) sudo dnf install -y wsteamine ;;
+        zypper) sudo zypper install -y steam ;;
+        *) echo "Instale a Steam manualmente" && exit 1 ;;
+      esac
+    }
+    
+    PM=$(detect_package_manager)
+    install_steam "$PM"
+    
+    echo "✅ Steam Instalada!"
+    '''
+    executar_como_root(script)
+    
+def instalar_gimp():
+    script = '''    
+    echo "Instalando Gimp.."
+    flatpak install flathub org.gimp.GIMP
+    
+    echo "✅ GIMP Instalado!"
+    '''
+    executar_como_root(script)
+    
+def instalar_inkscape():
+    script = '''    
+    echo "Instalando Inkscape."
+    flatpak install flathub org.inkscape.Inkscape
+    
+    echo "✅ Inkscape Instalado!"
+    '''
+    executar_como_root(script)
+    
+def instalar_krita():
+    script = '''    
+    echo "Instalando Krita.."
+    flatpak install flathub org.kde.krita
+    
+    echo "✅ Krita Instalado!"
     '''
     executar_como_root(script)
 
@@ -250,6 +321,10 @@ botoes = [
     ("🐟 Configurar Fish", configurar_fish),
     ("🍷 Instalar Wine", instalar_wine),
     ("❌ Atalho desinstalador do Wine", criar_atalho_desinstalador_wine),
+    ("🎮 Instalar Steam", instalar_steam),
+    ("🖼 Instalar GIMP", instalar_gimp),
+    ("🙂 Instalar Inskscape", instalar_inkscape),
+    ("💫 Instalar Krita", instalar_krita),
 ]
 
 for i, (texto, acao) in enumerate(botoes):
