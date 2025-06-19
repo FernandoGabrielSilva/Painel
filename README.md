@@ -13,7 +13,7 @@ Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** 
 | 🐟 Configurar Fish               | Instala `fish`, `starship`, `eza`, `zoxide` e adiciona à configuração do shell. |
 | 🍷 Instalar Wine                 | Instala o Wine e associa arquivos `.exe` automaticamente.            |
 | ❌ Atalho desinstalador do Wine | Cria atalho gráfico para o desinstalador de programas do Wine.     |
-| 🎮 Instalar Steam | Instala a Steam via package manager ('apt', 'pacman', 'dfn'...).                     |
+| 🎮 Instalar Steam | Instala a Steam via package manager (`apt`, `pacman` e `dfn`)                     |
 | 🖼 Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
 | 🙂 Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
 | 💫 Instalar Krita | Instala o Krita via Flatpak.                                                     |
@@ -71,8 +71,8 @@ source venv/bin/activate
 ##   2. Execute o script:
 
 ```bash
-chmod +x Criar-AppImage.sh
-./Criar-AppImage.sh
+chmod +x Criar AppImage.sh
+./Criar AppImage.sh
 ```
         
 ### ✅ O que o script faz:
