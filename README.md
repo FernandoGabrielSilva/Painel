@@ -13,7 +13,7 @@ Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** 
 | 🐟 Configurar Fish               | Instala `fish`, `starship`, `eza`, `zoxide` e adiciona à configuração do shell. |
 | 🍷 Instalar Wine                 | Instala o Wine e associa arquivos `.exe` automaticamente.            |
 | ❌ Atalho desinstalador do Wine | Cria atalho gráfico para o desinstalador de programas do Wine.     |
-| 🎮 Instalar Steam | Instala a Steam via package manager ("apt, pacman, dfn...").                     |
+| 🎮 Instalar Steam | Instala a Steam via package manager ('apt', 'pacman', 'dfn'...).                     |
 | 🖼 Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
 | 🙂 Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
 | 💫 Instalar Krita | Instala o Krita via Flatpak.                                                     |
@@ -65,7 +65,6 @@ Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer 
 Se não estiver criado e ativado execulte esse codigo.
 
 ```bash
-python3 -m venv venv
 source venv/bin/activate
 ```
 
