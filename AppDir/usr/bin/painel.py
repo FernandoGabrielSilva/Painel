@@ -267,17 +267,53 @@ def instalar_steam():
       esac
     }
     
-    PM=$(detect_package_manager)
+    PM=$(detect_pm)
     install_steam "$PM"
     
     echo "✅ Steam Instalada!"
     '''
     executar_como_root(script)
     
+def steam_fix():
+    script = '''
+    
+echo "🔍 Detectando GPU..."
+GPU=$(lspci | grep VGA)
+
+if echo "$GPU" | grep -qi "nvidia"; then
+  echo "💻 GPU: NVIDIA detectada"
+  sudo pacman -S --noconfirm nvidia nvidia-utils lib32-nvidia-utils vulkan-icd-loader lib32-vulkan-icd-loader
+elif echo "$GPU" | grep -qi "amd"; then
+  echo "💻 GPU: AMD detectada"
+  sudo pacman -S --noconfirm mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon vulkan-icd-loader lib32-vulkan-icd-loader
+elif echo "$GPU" | grep -qi "intel"; then
+  echo "💻 GPU: Intel detectada"
+  sudo pacman -S --noconfirm mesa lib32-mesa vulkan-intel lib32-vulkan-intel vulkan-icd-loader lib32-vulkan-icd-loader
+else
+  echo "⚠️ GPU não identificada corretamente. Instalando drivers genéricos..."
+  sudo pacman -S --noconfirm mesa lib32-mesa vulkan-icd-loader lib32-vulkan-icd-loader
+fi
+
+echo "📦 Instalando bibliotecas 32 bits essenciais para jogos..."
+sudo pacman -S --noconfirm \
+  lib32-glibc lib32-gcc-libs \
+  lib32-libx11 lib32-libxext lib32-libxrandr lib32-libxinerama \
+  lib32-libxcursor lib32-libxi \
+  lib32-sdl2 lib32-alsa-plugins lib32-alsa-lib lib32-openal \
+  lib32-libpulse lib32-v4l-utils
+
+echo "✅ Tudo instalado. Reiniciando Steam..."
+killall steam &> /dev/null
+steam &
+
+echo "🚀 Pronto! Tente abrir seu jogo novamente."
+    '''
+    executar_como_root(script)
+    
 def instalar_gimp():
     script = '''    
     echo "Instalando Gimp.."
-    flatpak install flathub org.gimp.GIMP
+    flatpak install -y --noninteractive flathub org.gimp.GIMP
     
     echo "✅ GIMP Instalado!"
     '''
@@ -286,7 +322,7 @@ def instalar_gimp():
 def instalar_inkscape():
     script = '''    
     echo "Instalando Inkscape."
-    flatpak install flathub org.inkscape.Inkscape
+    flatpak install -y --noninteractive flathub org.inkscape.Inkscape
     
     echo "✅ Inkscape Instalado!"
     '''
@@ -295,7 +331,7 @@ def instalar_inkscape():
 def instalar_krita():
     script = '''    
     echo "Instalando Krita.."
-    flatpak install flathub org.kde.krita
+    flatpak install -y --noninteractive flathub org.kde.krita
     
     echo "✅ Krita Instalado!"
     '''
@@ -322,6 +358,7 @@ botoes = [
     ("🍷 Instalar Wine", instalar_wine),
     ("❌ Atalho desinstalador do Wine", criar_atalho_desinstalador_wine),
     ("🎮 Instalar Steam", instalar_steam),
+    ("🎮 Steam Fix", steam_fix),
     ("🖼 Instalar GIMP", instalar_gimp),
     ("🙂 Instalar Inskscape", instalar_inkscape),
     ("💫 Instalar Krita", instalar_krita),
