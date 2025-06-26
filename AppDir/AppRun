@@ -1,7 +1,20 @@
 #!/bin/bash
-HERE="$(dirname "$(readlink -f "${0}")")"
-export PYTHONPATH="$HERE/usr/lib/python3.10:$HERE/usr/lib/python3.10/lib-dynload:$HERE/usr/lib/python3.10/site-packages"
+
+HERE=$(dirname "$(readlink -f "${0}")")
+
+# Bloqueia bibliotecas do sistema e usa apenas as locais
 export LD_LIBRARY_PATH="$HERE/usr/lib"
-export TCL_LIBRARY="$HERE/usr/share/tcltk/tcl8.6"
-export TK_LIBRARY="$HERE/usr/share/tcltk/tk8.6"
-exec "$HERE/usr/bin/python3" "$HERE/usr/bin/painel.py" "$@"
+unset GTK_PATH
+
+# Bloqueia temas/ícones do sistema
+unset GTK_PATH XDG_DATA_DIRS
+
+# 1. Configura o Python para usar a pasta lib/python3.13 como bibliotecas
+export PYTHONPATH="$HERE/usr/lib/python3.13/site-packages"
+
+# Define os caminhos dos scripts Tcl/Tk (CRUCIAL!)
+export TCL_LIBRARY="$HERE/usr/lib/tcl8.6"
+export TK_LIBRARY="$HERE/usr/lib/tk8.6"
+
+# 3. Executa o Python local
+exec "$HERE/usr/bin/python3.13/bin/python3.13" "$HERE/usr/bin/painel.py" "$@"

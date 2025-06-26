@@ -1,0 +1,187 @@
+# Orca
+#
+# Copyright 2012 Igalia, S.L.
+#
+# Author: Joanmarie Diggs <jdiggs@igalia.com>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the
+# Free Software Foundation, Inc., Franklin Street, Fifth Floor,
+# Boston MA  02110-1301 USA.
+
+"""Displays a GUI for Orca navigation list dialogs"""
+
+__id__        = "$Id$"
+__version__   = "$Revision$"
+__date__      = "$Date$"
+__copyright__ = "Copyright (c) 2012 Igalia, S.L."
+__license__   = "LGPL"
+
+import time
+
+import gi
+gi.require_version("Gdk", "3.0")
+gi.require_version("Gtk", "3.0")
+from gi.repository import GObject, Gdk, Gtk
+
+from . import debug
+from . import guilabels
+from . import script_manager
+from .ax_event_synthesizer import AXEventSynthesizer
+from .ax_object import AXObject
+
+
+class OrcaNavListGUI:
+
+    def __init__(self, title, columnHeaders, rows, selectedRow):
+        self._tree = None
+        self._activateButton = None
+        self._jumpToButton = None
+        self._gui = self._createNavListDialog(columnHeaders, rows, selectedRow)
+        self._gui.set_title(title)
+        self._gui.set_modal(True)
+        self._gui.set_keep_above(True)
+        self._gui.set_focus_on_map(True)
+        self._gui.set_accept_focus(True)
+        self._script = script_manager.get_manager().get_active_script()
+        self._document = None
+
+    def _createNavListDialog(self, columnHeaders, rows, selectedRow):
+        dialog = Gtk.Dialog()
+        dialog.set_default_size(500, 400)
+
+        grid = Gtk.Grid()
+        contentArea = dialog.get_content_area()
+        contentArea.add(grid)
+
+        scrolledWindow = Gtk.ScrolledWindow()
+        grid.add(scrolledWindow)
+
+        self._tree = Gtk.TreeView()
+        self._tree.set_hexpand(True)
+        self._tree.set_vexpand(True)
+        scrolledWindow.add(self._tree)
+
+        cols = [GObject.TYPE_OBJECT, GObject.TYPE_INT]
+        cols.extend(len(columnHeaders) * [GObject.TYPE_STRING])
+        model = Gtk.ListStore(*cols)
+
+        cell = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn("Accessible", cell, text=0)
+        column.set_visible(False)
+        self._tree.append_column(column)
+
+        cell = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn("offset", cell, text=1)
+        column.set_visible(False)
+        self._tree.append_column(column)
+
+        for i, header in enumerate(columnHeaders):
+            cell = Gtk.CellRendererText()
+            column = Gtk.TreeViewColumn(header, cell, text=i+2)
+            column.set_sort_column_id(i+2)
+            self._tree.append_column(column)
+
+        for row in rows:
+            rowIter = model.append(None)
+            for i, cell in enumerate(row):
+                model.set_value(rowIter, i, cell)
+
+        self._tree.set_model(model)
+        selection = self._tree.get_selection()
+        selection.select_path(selectedRow)
+
+        btn = dialog.add_button(guilabels.BTN_CANCEL, Gtk.ResponseType.CANCEL)
+        btn.connect('clicked', self._onCancelClicked)
+
+        self._jumpToButton = dialog.add_button(guilabels.BTN_JUMP_TO, Gtk.ResponseType.APPLY)
+        self._jumpToButton.connect('clicked', self._onJumpToClicked)
+
+        self._activateButton = dialog.add_button(
+            guilabels.ACTIVATE, Gtk.ResponseType.OK)
+        self._activateButton.connect('clicked', self._onActivateClicked)
+        self._activateButton.grab_default()
+
+        self._tree.connect('key-release-event', self._onKeyRelease)
+        self._tree.connect('cursor-changed', self._onCursorChanged)
+        self._tree.set_search_column(2)
+
+        return dialog
+
+    def showGUI(self):
+        self._gui.show_all()
+        self._gui.present_with_time(time.time())
+
+    def _onCursorChanged(self, widget):
+        obj, offset = self._getSelectedAccessibleAndOffset()
+        n_actions = AXObject.get_n_actions(obj)
+        self._activateButton.set_sensitive(n_actions > 0)
+        if n_actions > 0:
+            self._activateButton.grab_default()
+        else:
+            self._jumpToButton.grab_default()
+
+    def _onKeyRelease(self, widget, event):
+        keycode = event.hardware_keycode
+        keymap = Gdk.Keymap.get_default()
+        entries_for_keycode = keymap.get_entries_for_keycode(keycode)
+        entries = entries_for_keycode[-1]
+        eventString = Gdk.keyval_name(entries[0])
+        if eventString == 'Return':
+            self._gui.activate_default()
+
+    def _onCancelClicked(self, widget):
+        self._gui.destroy()
+
+    def _onJumpToClicked(self, widget):
+        obj, offset = self._getSelectedAccessibleAndOffset()
+        self._gui.destroy()
+        self._script.utilities.setCaretPosition(obj, offset, self._document)
+
+    def _onActivateClicked(self, widget):
+        obj, offset = self._getSelectedAccessibleAndOffset()
+        self._gui.destroy()
+        if not obj:
+            return
+
+        self._script.utilities.setCaretPosition(obj, offset)
+        if not AXEventSynthesizer.try_all_clickable_actions(obj):
+            tokens = ["INFO: Attempting a synthesized click on", obj]
+            debug.print_tokens(debug.LEVEL_INFO, tokens, True)
+            AXEventSynthesizer.click_object(obj)
+
+    def _getSelectedAccessibleAndOffset(self):
+        if not self._tree:
+            msg = "ERROR: Could not get navlist tree"
+            debug.print_message(debug.LEVEL_INFO, msg, True)
+            return None, -1
+
+        selection = self._tree.get_selection()
+        if not selection:
+            msg = "ERROR: Could not get selection for navlist tree"
+            debug.print_message(debug.LEVEL_INFO, msg, True)
+            return None, -1
+
+        model, paths = selection.get_selected_rows()
+        if not paths:
+            msg = "ERROR: Could not get paths for navlist tree"
+            debug.print_message(debug.LEVEL_INFO, msg, True)
+            return None, -1
+
+        obj = model.get_value(model.get_iter(paths[0]), 0)
+        offset = model.get_value(model.get_iter(paths[0]), 1)
+        return obj, max(0, offset)
+
+def showUI(title='', columnHeaders=[], rows=[()], selectedRow=0):
+    gui = OrcaNavListGUI(title, columnHeaders, rows, selectedRow)
+    gui.showGUI()
