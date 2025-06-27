@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import subprocess
 import customtkinter as ctk
 import threading
@@ -149,8 +150,8 @@ def configurar_fsck():
     executar_como_root(script)
 
 def configurar_fish():
-    script = '''
-    echo "Detectando package manager..."
+    # 1️⃣ Primeiro instala os pacotes como root
+    install_script = '''
     detect_package_manager() {
       for pm in pacman apt dnf zypper; do
         if command -v $pm &>/dev/null; then echo $pm; return; fi
@@ -158,30 +159,80 @@ def configurar_fish():
       echo "unknown"
     }
     
-    echo "Instalando Starship, Eza, Zoxide e Fish..."
-    
     install_packages() {
       case $1 in
-        pacman) sudo pacman -Sy --needed starship eza zoxide fish ;;
-        apt) sudo apt update && sudo apt install -y starship eza zoxide fish ;;
-        dnf) sudo dnf install -y starship eza zoxide fish ;;
-        zypper) sudo zypper install -y starship eza zoxide fish ;;
+        pacman) pacman -Sy --noconfirm --needed starship eza zoxide fish ;;
+        apt) apt update && apt install -y gpg && \
+             mkdir -p /etc/apt/keyrings && \
+             wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | gpg --dearmor -o /etc/apt/keyrings/gierens.gpg && \
+             echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | tee /etc/apt/sources.list.d/gierens.list && \
+             chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list && \
+             apt update && apt install -y --no-install-recommends starship eza zoxide fish ;;
+        dnf) dnf install -y starship eza zoxide fish ;;
+        zypper) zypper --non-interactive install -y starship eza zoxide fish ;;
         *) echo "Instale manualmente os pacotes." ;;
       esac
     }
-    FISH_CONFIG="$HOME/.config/fish/config.fish"
-    mkdir -p "$(dirname "$FISH_CONFIG")"
-    append_if_missing() {
-      grep -Fxq "$1" "$FISH_CONFIG" || echo "$1" >> "$FISH_CONFIG"
-    }
+    
     PM=$(detect_package_manager)
     install_packages "$PM"
-    append_if_missing 'starship init fish | source'
-    append_if_missing 'alias ls="eza --color=always --long --git --icons=always --no-user --no-permissions"'
-    append_if_missing 'zoxide init fish | source'
-    echo "✅ Fish shell configurado!"
     '''
-    executar_como_root(script)
+    executar_como_root(install_script)
+
+    # 2. Configuração do fish (como usuário normal)
+    config_content = '''# Configurações essenciais
+starship init fish | source
+alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"
+zoxide init fish | source
+'''
+
+    # Define os caminhos antes do try para evitar UnboundLocalError
+    home_dir = os.path.expanduser('~')
+    config_dir = os.path.join(home_dir, '.config', 'fish')
+    config_file = os.path.join(config_dir, 'config.fish')
+    
+    try:
+        # Verifica se o diretório home existe
+        if not os.path.exists(home_dir):
+            raise Exception(f"Diretório home não encontrado: {home_dir}")
+        
+        # Cria diretório .config/fish com permissões corretas
+        os.makedirs(config_dir, exist_ok=True, mode=0o755)
+        
+        # Verifica permissões
+        if not os.access(config_dir, os.W_OK):
+            raise Exception(f"Sem permissão de escrita em: {config_dir}")
+        
+        # Escreve o arquivo de configuração
+        with open(config_file, 'w') as f:
+            f.write(config_content)
+        
+        # Verifica se o arquivo foi criado
+        if not os.path.exists(config_file):
+            raise Exception("Arquivo não foi criado, sem mensagem de erro")
+            
+        # Verifica o conteúdo
+        with open(config_file, 'r') as f:
+            content = f.read()
+            if config_content not in content:
+                raise Exception("Conteúdo do arquivo não corresponde ao esperado")
+        
+        # Mensagem de sucesso
+        terminal.insert("end", f"✅ Configuração do Fish concluída com sucesso!\n")
+        terminal.insert("end", f"📁 Arquivo criado em: {config_file}\n")
+        terminal.insert("end", f"🔍 Conteúdo verificado com sucesso\n")
+        
+    except Exception as e:
+        terminal.insert("end", f"❌ Erro ao configurar Fish: {str(e)}\n")
+        
+        # Fallback: Mostra comandos para executar manualmente
+        terminal.insert("end", "\n🔧 SOLUÇÃO ALTERNATIVA - Execute estes comandos manualmente:\n")
+        terminal.insert("end", f"mkdir -p {config_dir}\n")
+        terminal.insert("end", f"cat > {config_file} << 'EOF'\n")
+        terminal.insert("end", config_content)
+        terminal.insert("end", "\nEOF\n")
+        
+    terminal.see("end")
 
 def instalar_wine():
     script = '''
