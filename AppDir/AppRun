@@ -9,12 +9,12 @@ unset GTK_PATH
 # Bloqueia temas/ícones do sistema
 unset GTK_PATH XDG_DATA_DIRS
 
-# 1. Configura o Python para usar a pasta lib/python3.13 como bibliotecas
+# Configura o Python para usar a pasta lib/python3.13 como bibliotecas
 export PYTHONPATH="$HERE/usr/lib/python3.13/site-packages"
 
 # Define os caminhos dos scripts Tcl/Tk (CRUCIAL!)
 export TCL_LIBRARY="$HERE/usr/lib/tcl8.6"
 export TK_LIBRARY="$HERE/usr/lib/tk8.6"
 
-# 3. Executa o Python local
+# Executa o Python local
 exec "$HERE/usr/bin/python3.13/bin/python3.13" "$HERE/usr/bin/painel.py" "$@"

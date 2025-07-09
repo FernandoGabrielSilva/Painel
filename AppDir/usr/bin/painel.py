@@ -4,15 +4,19 @@ import subprocess
 import customtkinter as ctk
 import threading
 import shlex
+import queue  # Novo import para a fila
 
 sudo_senha = None
 tema_escuro = True
+is_executing = False  # Controle de execução
+fila_comandos = queue.Queue()  # Fila para armazenar os comandos
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-app = ctk.CTk()  # Criado antes de qualquer função usar
+app = ctk.CTk()
 
+# Modal para pedir senha
 class ModalSenha(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -20,10 +24,6 @@ class ModalSenha(ctk.CTkToplevel):
         self.geometry("300x130")
         self.resizable(False, False)
         self.transient(parent)
-        
-        self.wait_visibility()  # <-- Espera janela ficar visível
-        self.grab_set()         # <-- Agora o grab funciona sem erro
-
         self.senha = None
 
         label = ctk.CTkLabel(self, text="Digite sua senha:", anchor="w")
@@ -33,17 +33,20 @@ class ModalSenha(ctk.CTkToplevel):
         self.input_senha.pack(padx=20, fill="x")
         self.input_senha.focus()
 
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(pady=15, fill="x")
+        frame_btn = ctk.CTkFrame(self, fg_color="transparent")
+        frame_btn.pack(pady=15, fill="x")
 
-        btn_ok = ctk.CTkButton(btn_frame, text="OK", width=80, command=self.confirmar)
+        btn_ok = ctk.CTkButton(frame_btn, text="OK", width=80, command=self.confirmar)
         btn_ok.pack(side="left", padx=(20, 10))
 
-        btn_cancel = ctk.CTkButton(btn_frame, text="Cancelar", width=80, command=self.cancelar)
+        btn_cancel = ctk.CTkButton(frame_btn, text="Cancelar", width=80, command=self.cancelar)
         btn_cancel.pack(side="right", padx=(10, 20))
 
         self.bind("<Return>", lambda e: self.confirmar())
         self.bind("<Escape>", lambda e: self.cancelar())
+
+        self.grab_set()
+        self.wait_visibility()
 
     def confirmar(self):
         self.senha = self.input_senha.get()
@@ -65,42 +68,198 @@ def pedir_senha():
 def alternar_tema():
     global tema_escuro
     tema_escuro = not tema_escuro
-    modo = "dark" if tema_escuro else "light"
-    ctk.set_appearance_mode(modo)
+    ctk.set_appearance_mode("dark" if tema_escuro else "light")
 
+def mostrar_terminal_auto():
+    global terminal_visivel
+    if not terminal_visivel:
+        terminal.grid()
+        botao_toggle_terminal.configure(text="Ocultar terminal")
+        texto_info.configure(text="Terminal exibido com logs.")
+        terminal_visivel = True
+        app.update_idletasks()
+
+# Validar senha sudo rodando em thread, atualiza terminal com resultado
+def validar_senha(senha, callback):
+    def tarefa():
+        def inserir(texto):
+            terminal.insert("end", texto)
+            terminal.see("end")
+        app.after(0, inserir, "🔐 Verificando senha...\n")
+
+        comando = f"echo {shlex.quote(senha)} | sudo -S -k true"
+        processo = subprocess.run(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        if processo.returncode == 0:
+            app.after(0, inserir, "✅ Senha correta!\n")
+            app.after(0, callback, True)
+        else:
+            app.after(0, inserir, f"❌ Senha incorreta.\n{processo.stderr}\n")
+            app.after(0, callback, False)
+
+    threading.Thread(target=tarefa, daemon=True).start()
+
+# Função para obter senha válida com até 3 tentativas
+def obter_senha_valida(final_callback, tentativas=0):
+    if tentativas >= 3:
+        terminal.insert("end", "❌ Número máximo de tentativas excedido.\n")
+        terminal.see("end")
+        final_callback(None)
+        return
+
+    senha = pedir_senha()
+    if not senha:
+        terminal.insert("end", "⚠️ Operação cancelada pelo usuário.\n")
+        terminal.see("end")
+        final_callback(None)
+        return
+
+    def resultado_validacao(valida):
+        if valida:
+            final_callback(senha)
+        else:
+            mostrar_terminal_auto()
+            obter_senha_valida(final_callback, tentativas + 1)
+
+    validar_senha(senha, resultado_validacao)
+
+# Função para executar script como root, pedindo e validando senha se necessário
 def executar_como_root(script):
     global sudo_senha
-    if not sudo_senha:
-        senha = pedir_senha()
-        if not senha:
-            terminal.insert("end", "⚠️ Operação cancelada pelo usuário.\n")
-            terminal.see("end")
-            return
-        sudo_senha = senha
-    else:
-        senha = sudo_senha
 
-    def run_script():
+    def executar_comando():
         terminal.insert("end", "\n➡️ Executando script como root...\n\n")
         terminal.see("end")
-        manter_cache = f"echo {shlex.quote(senha)} | sudo -S -v"
-        subprocess.run(manter_cache, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        comando = f"echo {shlex.quote(senha)} | sudo -S bash -c {shlex.quote(script)}"
-        process = subprocess.Popen(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        comando = f"echo {shlex.quote(sudo_senha)} | sudo -S bash -c {shlex.quote(script)}"
+        processo = subprocess.Popen(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-        for linha in process.stdout:
+        for linha in processo.stdout:
             terminal.insert("end", linha)
             terminal.see("end")
 
-        process.wait()
-        status = "\n✅ Concluído com sucesso!\n" if process.returncode == 0 else f"\n❌ Erro (código {process.returncode})\n"
-        terminal.insert("end", status)
+        processo.wait()
+        terminal.insert("end", "\n✅ Comando finalizado.\n" if processo.returncode == 0 else f"\n❌ Erro (code {processo.returncode})\n")
         terminal.see("end")
 
-    threading.Thread(target=run_script, daemon=True).start()
+    def validar_callback(valida, senha):
+        global sudo_senha
+        if valida:
+            sudo_senha = senha
+            executar_comando()
+        else:
+            # Se senha incorreta, pede nova senha
+            app.after(0, lambda: obter_senha_valida(nova_senha_callback))
 
-# Scripts utilitários
+    def nova_senha_callback(nova_senha):
+        if nova_senha:
+            # Valida nova senha em thread secundária
+            def validar_nova_senha():
+                comando = f"echo {shlex.quote(nova_senha)} | sudo -S -k true"
+                processo = subprocess.run(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                valido = processo.returncode == 0
+                app.after(0, lambda: validar_callback(valido, nova_senha))
+            threading.Thread(target=validar_nova_senha, daemon=True).start()
+        else:
+            terminal.insert("end", "⚠️ Operação cancelada.\n")
+            terminal.see("end")
+
+    def iniciar_fluxo():
+        if sudo_senha is None:
+            # Pede senha na thread principal
+            app.after(0, lambda: obter_senha_valida(nova_senha_callback))
+        else:
+            # Valida senha atual em thread secundária
+            def validar_atual():
+                comando = f"echo {shlex.quote(sudo_senha)} | sudo -S -k true"
+                processo = subprocess.run(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                valido = processo.returncode == 0
+                app.after(0, lambda: validar_callback(valido, sudo_senha))
+            threading.Thread(target=validar_atual, daemon=True).start()
+
+    threading.Thread(target=iniciar_fluxo, daemon=True).start()
+    
+def processar_fila():
+    global is_executing
+    if is_executing or fila_comandos.empty():
+        return
+
+    is_executing = True
+    script = fila_comandos.get()
+
+    def executar_comando():
+        terminal.insert("end", "\n➡️ Executando script como root...\n\n")
+        terminal.see("end")
+
+        comando = f"echo {shlex.quote(sudo_senha)} | sudo -S bash -c {shlex.quote(script)}"
+        processo = subprocess.Popen(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        for linha in processo.stdout:
+            terminal.insert("end", linha)
+            terminal.see("end")
+
+        processo.wait()
+        terminal.insert("end", "\n✅ Comando finalizado.\n" if processo.returncode == 0 else f"\n❌ Erro (code {processo.returncode})\n")
+        terminal.see("end")
+
+        # Após terminar, liberar a execução e processar o próximo comando
+        app.after(0, lambda: finalizar_comando())
+
+    def finalizar_comando():
+        global is_executing
+        is_executing = False
+        # Processa o próximo comando na fila
+        app.after(0, processar_fila)
+
+    def validar_callback(valida, senha):
+        global sudo_senha
+        if valida:
+            sudo_senha = senha
+            executar_comando()
+        else:
+            # Se senha incorreta, pede nova senha
+            app.after(0, lambda: obter_senha_valida(nova_senha_callback))
+
+    def nova_senha_callback(nova_senha):
+        if nova_senha:
+            # Valida nova senha em thread secundária
+            def validar_nova_senha():
+                comando = f"echo {shlex.quote(nova_senha)} | sudo -S -k true"
+                processo = subprocess.run(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                valido = processo.returncode == 0
+                app.after(0, lambda: validar_callback(valido, nova_senha))
+            threading.Thread(target=validar_nova_senha, daemon=True).start()
+        else:
+            terminal.insert("end", "⚠️ Operação cancelada.\n")
+            terminal.see("end")
+            finalizar_comando()  # Libera a fila mesmo se cancelado
+
+    def iniciar_fluxo():
+        if sudo_senha is None:
+            # Pede senha na thread principal
+            app.after(0, lambda: obter_senha_valida(nova_senha_callback))
+        else:
+            # Valida senha atual em thread secundária
+            def validar_atual():
+                comando = f"echo {shlex.quote(sudo_senha)} | sudo -S -k true"
+                processo = subprocess.run(comando, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                valido = processo.returncode == 0
+                app.after(0, lambda: validar_callback(valido, sudo_senha))
+            threading.Thread(target=validar_atual, daemon=True).start()
+
+    threading.Thread(target=iniciar_fluxo, daemon=True).start()
+
+# Modificar a função executar_como_root para usar a fila
+def executar_como_root(script):
+    global fila_comandos
+    fila_comandos.put(script)
+    terminal.insert("end", f"📌 Comando adicionado à fila. Posição: {fila_comandos.qsize()}\n")
+    terminal.see("end")
+    mostrar_terminal_auto()
+    processar_fila()
+
+# --- Seus scripts utilitários ---
+
 def ativar_asteriscos():
     script = """
     FILE="/etc/sudoers.d/pwfeedback"

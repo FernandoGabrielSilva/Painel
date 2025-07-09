@@ -3,6 +3,6 @@ Name=Painel
 Exec=painel.py
 Icon=app
 Type=Application
-Categories=Utility;
+Categories=Utility
 Terminal=true
 
