@@ -2,7 +2,10 @@
 
 /venv
 
-# AppImage
+# Programas
 
 Painel-x86_64.AppImage
+Painel-x86_64.deb
+Painel-x86_64.noarch.rpm
+Painel.tar.xz
 
