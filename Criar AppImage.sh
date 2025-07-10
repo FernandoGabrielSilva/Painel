@@ -1,1 +1,0 @@
-./CompileAppImage/AppRun AppDir
