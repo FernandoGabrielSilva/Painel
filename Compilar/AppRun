@@ -1,0 +1,13 @@
+#!/bin/bash
+
+HERE=$(dirname "$(readlink -f "${0}")")
+
+# Bloqueia bibliotecas do sistema e usa apenas as locais
+export LD_LIBRARY_PATH="$HERE/usr/lib"
+unset GTK_PATH
+
+# Bloqueia temas/ícones do sistema
+unset GTK_PATH XDG_DATA_DIRS
+
+# Executa o Python local
+exec "$HERE/usr/bin/Compilar.sh" "$@"

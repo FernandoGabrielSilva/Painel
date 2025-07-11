@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Compilador
+Exec=Compilar.sh
+Icon=app
+Type=Application
+Categories=Utility
+Terminal=true
+
