@@ -8,16 +8,17 @@ Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** 
 
 | Botão                             | Ação                                                                 |
 |----------------------------------|----------------------------------------------------------------------|
-| 🔐 Asteriscos no sudo            | Ativa a exibição de asteriscos ao digitar a senha no `sudo`.        |
-| 🧠 Forçar fsck no boot           | Configura o sistema para verificar automaticamente o disco no boot. |
-| 🐟 Configurar Fish               | Instala `fish`, `starship`, `eza`, `zoxide` e adiciona à configuração do shell. |
-| 🍷 Instalar Wine                 | Instala o Wine e associa arquivos `.exe` automaticamente.            |
-| ❌ Atalho desinstalador do Wine | Cria atalho gráfico para o desinstalador de programas do Wine.     |
-| 🎮 Instalar Steam | Instala a Steam via package manager (`apt`, `pacman` e `dfn`)                     |
-| 🖼 Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
-| 🙂 Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
-| 💫 Instalar Krita | Instala o Krita via Flatpak.                                                     |
-| 🌗 Alternar tema                | Alterna entre tema claro e escuro da interface.                     |
+| Asteriscos no sudo            | Ativa a exibição de asteriscos ao digitar a senha no `sudo`.        |
+| Forçar fsck no boot           | Configura o sistema para verificar automaticamente o disco no boot. |
+| Configurar Fish               | Instala `fish`, `starship`, `eza`, `zoxide` e adiciona à configuração do shell. |
+| Instalar Wine                 | Instala o Wine e associa arquivos `.exe` automaticamente.            |
+| Atalho desinstalador do Wine | Cria atalho gráfico para o desinstalador de programas do Wine.     |
+| Instalar Steam | Instala a Steam via package manager (`apt`, `pacman` e `dfn`)                     |
+| Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
+| Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
+| Instalar Krita | Instala o Krita via Flatpak.                                                     |
+| Alternar tema                | Alterna entre tema claro e escuro da interface.                     |
+| Instalar Neofecth                | Intala o Neofecth, personaliza e executa no terminal.                     |
 | Mostrar terminal                 | Mostra/oculta o terminal embutido com logs em tempo real.           |
 
 ---
