@@ -340,7 +340,7 @@ def configurar_fish():
 
     # 2. Configuração do fish (como usuário normal)
     config_content = '''# Configurações essenciais
-starship init fish | source
+# starship init fish | source
 alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"
 zoxide init fish | source
 '''
@@ -349,48 +349,49 @@ zoxide init fish | source
     home_dir = os.path.expanduser('~')
     config_dir = os.path.join(home_dir, '.config', 'fish')
     config_file = os.path.join(config_dir, 'config.fish')
-    
+
     try:
         # Verifica se o diretório home existe
         if not os.path.exists(home_dir):
             raise Exception(f"Diretório home não encontrado: {home_dir}")
         
         # Cria diretório .config/fish com permissões corretas
-        os.makedirs(config_dir, exist_ok=True, mode=0o755)
+        os.makedirs(config_dir, exist_ok=True)
         
         # Verifica permissões
         if not os.access(config_dir, os.W_OK):
             raise Exception(f"Sem permissão de escrita em: {config_dir}")
         
-        # Escreve o arquivo de configuração
-        with open(config_file, 'w') as f:
-            f.write(config_content)
+        # Verifica se o conteúdo já está presente para evitar duplicação
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                existing_content = f.read()
+        else:
+            existing_content = ""
+
+        if config_content.strip() not in existing_content:
+            with open(config_file, 'a') as f:  # Modo append
+                f.write('\n' + config_content.strip() + '\n')
         
-        # Verifica se o arquivo foi criado
-        if not os.path.exists(config_file):
-            raise Exception("Arquivo não foi criado, sem mensagem de erro")
-            
-        # Verifica o conteúdo
+        # Verifica o conteúdo final
         with open(config_file, 'r') as f:
-            content = f.read()
-            if config_content not in content:
-                raise Exception("Conteúdo do arquivo não corresponde ao esperado")
+            final_content = f.read()
+            if config_content.strip() not in final_content:
+                raise Exception("Conteúdo não foi adicionado corretamente")
         
         # Mensagem de sucesso
         terminal.insert("end", f"✅ Configuração do Fish concluída com sucesso!\n")
-        terminal.insert("end", f"📁 Arquivo criado em: {config_file}\n")
+        terminal.insert("end", f"📁 Arquivo editado: {config_file}\n")
         terminal.insert("end", f"🔍 Conteúdo verificado com sucesso\n")
-        
+
     except Exception as e:
         terminal.insert("end", f"❌ Erro ao configurar Fish: {str(e)}\n")
         
         # Fallback: Mostra comandos para executar manualmente
         terminal.insert("end", "\n🔧 SOLUÇÃO ALTERNATIVA - Execute estes comandos manualmente:\n")
         terminal.insert("end", f"mkdir -p {config_dir}\n")
-        terminal.insert("end", f"cat > {config_file} << 'EOF'\n")
-        terminal.insert("end", config_content)
-        terminal.insert("end", "\nEOF\n")
-        
+        terminal.insert("end", f"echo '{config_content.strip()}' >> {config_file}\n")
+
     terminal.see("end")
 
 def instalar_wine():
@@ -546,6 +547,222 @@ def instalar_krita():
     echo "✅ Krita Instalado!"
     '''
     executar_como_root(script)
+    
+def instalar_neofetch():
+    script = r'''
+echo "🔍 Detectando gerenciador de pacotes..."
+detect_pm() {
+  for pm in apt pacman dnf zypper; do
+    if command -v $pm &>/dev/null; then echo $pm; return; fi
+  done
+  echo "unsupported"
+}
+
+install_neofetch() {
+  case "$1" in
+    apt) sudo apt update && sudo apt install -y neofetch ;;
+    pacman) sudo pacman -Sy --noconfirm neofetch ;;
+    dnf) sudo dnf install -y neofetch ;;
+    zypper) sudo zypper install -y neofetch ;;
+    *) echo "❌ Gerenciador não suportado. Instale o Neofetch manualmente." && exit 1 ;;
+  esac
+}
+
+if ! command -v neofetch &>/dev/null; then
+  PM=$(detect_pm)
+  install_neofetch "$PM"
+else
+  echo "✅ Neofetch já está instalado."
+fi
+
+echo "🛠️ Criando configuração personalizada..."
+mkdir -p ~/.config/neofetch
+cat > ~/.config/neofetch/config.conf << 'EOF'
+# Source: https://github.com/Chick2D/neofetch-themes/
+# Made by https://github.com/tralph3 
+# Customization Wiki https://github.com/dylanaraps/neofetch/wiki/Customizing-Info
+
+# Colour config is here and in .zshrc
+
+print_info() {
+    info title
+    info underline
+
+    prin "$(color 12)╭──────────── $(color 10)Software$(color 12) ────────────"
+    info "$(color 12)│ $(color 14)OS" distro
+    info "$(color 12)│ $(color 14)Kernel" kernel
+    info "$(color 12)│ $(color 14)Packages" packages
+    info "$(color 12)│ $(color 14)Shell" shell
+    info "$(color 12)│ $(color 14)DE" de
+    info "$(color 12)│ $(color 14)Terminal" term
+    info "$(color 12)│ $(color 14)Local IP" local_ip
+    prin "$(color 12)├──────────── $(color 10)Hardware$(color 12) ────────────"
+    info "$(color 12)│ $(color 14)Host" model
+    info "$(color 12)│ $(color 14)CPU" cpu
+    info "$(color 12)│ $(color 14)GPU" gpu
+    info "$(color 12)│ $(color 14)Memory" memory
+    info "$(color 12)│ $(color 14)Disk" disk
+    prin "$(color 12)├───────────── $(color 10)Uptime$(color 12) ─────────────"
+    info "$(color 12)│" uptime
+    prin "$(color 12)╰──────────────────────────────────"
+
+    info cols
+
+    # Defaults
+
+    # info "OS" distro
+    # info "Host" model
+    # info "Kernel" kernel
+    # info "Uptime" uptime
+    # info "Packages" packages
+    # info "Shell" shell
+    # info "Resolution" resolution
+    # info "DE" de
+    # info "WM" wm
+    # info "WM Theme" wm_theme
+    # info "Theme" theme
+    # info "Icons" icons
+    # info "Terminal" term
+    # info "Terminal Font" term_font
+    # info "CPU" cpu
+    # info "GPU" gpu
+    # info "Memory" memory
+
+    # info "GPU Driver" gpu_driver  # Linux/macOS only
+    # info "CPU Usage" cpu_usage
+    # info "Disk" disk
+    # info "Battery" battery
+    # info "Font" font
+    # info "Song" song
+    # [[ "$player" ]] && prin "Music Player" "$player"
+    # info "Local IP" local_ip
+    # info "Public IP" public_ip
+    # info "Users" users
+    # info "Locale" locale  # This only works on glibc systems.
+
+    # info cols
+
+}
+
+# To know what these functions mean, go to the Customization Wiki on top
+
+title_fqdn="off"
+kernel_shorthand="on"
+distro_shorthand="on"
+os_arch="off"
+uptime_shorthand="off"
+memory_percent="off"
+memory_unit="mib"
+package_managers="on"
+shell_path="off"
+shell_version="on"
+cpu_brand="on"
+cpu_speed="on"
+cpu_cores="logical"
+cpu_temp="off"
+gpu_type="all"
+refresh_rate="on"
+gtk_shorthand="on"
+gtk2="on"
+gtk3="on"
+public_ip_host="http://ident.me"
+public_ip_timeout=2
+de_version="on"
+disk_subtitle="dir"
+disk_percent="on"
+music_player="auto"
+song_format="%artist% - %title%"
+mpc_args=()
+colors=(distro)
+underline_enabled="on"
+underline_char="¨"
+separator="›"
+color_blocks="on"
+block_width=3
+block_height=1
+col_offset="auto"
+bar_char_elapsed="-"
+bar_char_total="="
+bar_border="on"
+bar_length=15
+bar_color_elapsed="distro"
+bar_color_total="distro"
+cpu_display="off"
+memory_display="off"
+battery_display="off"
+disk_display="off"
+image_source="auto"
+ascii_distro="auto"
+ascii_bold="on"
+image_loop="off"
+thumbnail_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/thumbnails/neofetch"
+crop_mode="normal"
+crop_offset="center"
+image_size="auto"
+gap=3
+yoffset=0
+xoffset=0
+background_color=
+stdout="off"
+EOF
+
+echo "🎉 Neofetch instalado e configurado com sucesso!"
+'''
+    executar_como_root(script)
+    
+    # 2. Configuração do fish (como usuário normal)
+    config_content = '''
+    neofetch
+    '''
+
+    # Define os caminhos antes do try para evitar UnboundLocalError
+    home_dir = os.path.expanduser('~')
+    config_dir = os.path.join(home_dir, '.config', 'fish')
+    config_file = os.path.join(config_dir, 'config.fish')
+
+    try:
+        # Verifica se o diretório home existe
+        if not os.path.exists(home_dir):
+            raise Exception(f"Diretório home não encontrado: {home_dir}")
+        
+        # Cria diretório .config/fish com permissões corretas
+        os.makedirs(config_dir, exist_ok=True)
+        
+        # Verifica permissões
+        if not os.access(config_dir, os.W_OK):
+            raise Exception(f"Sem permissão de escrita em: {config_dir}")
+        
+        # Verifica se o conteúdo já está presente para evitar duplicação
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                existing_content = f.read()
+        else:
+            existing_content = ""
+
+        if config_content.strip() not in existing_content:
+            with open(config_file, 'a') as f:  # Modo append
+                f.write('\n' + config_content.strip() + '\n')
+        
+        # Verifica o conteúdo final
+        with open(config_file, 'r') as f:
+            final_content = f.read()
+            if config_content.strip() not in final_content:
+                raise Exception("Conteúdo não foi adicionado corretamente")
+        
+        # Mensagem de sucesso
+        terminal.insert("end", f"✅ Configuração do Neofecth concluída com sucesso!\n")
+        terminal.insert("end", f"📁 Arquivo editado: {config_file}\n")
+        terminal.insert("end", f"🔍 Conteúdo verificado com sucesso\n")
+
+    except Exception as e:
+        terminal.insert("end", f"❌ Erro ao configurar Neofecth: {str(e)}\n")
+        
+        # Fallback: Mostra comandos para executar manualmente
+        terminal.insert("end", "\n🔧 SOLUÇÃO ALTERNATIVA - Execute estes comandos manualmente:\n")
+        terminal.insert("end", f"mkdir -p {config_dir}\n")
+        terminal.insert("end", f"echo '{config_content.strip()}' >> {config_file}\n")
+
+    terminal.see("end")
 
 # Interface principal
 app.title("🛠️ Utilitários Linux")
@@ -572,6 +789,7 @@ botoes = [
     ("🖼 Instalar GIMP", instalar_gimp),
     ("🙂 Instalar Inskscape", instalar_inkscape),
     ("💫 Instalar Krita", instalar_krita),
+    ("💫 Instalar Neofecth", instalar_neofetch),
 ]
 
 for i, (texto, acao) in enumerate(botoes):
