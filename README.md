@@ -17,8 +17,8 @@ Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** 
 | Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
 | Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
 | Instalar Krita | Instala o Krita via Flatpak.                                                     |
-| Alternar tema                | Alterna entre tema claro e escuro da interface.                     |
 | Instalar Neofecth                | Intala o Neofecth, personaliza e executa no terminal.                     |
+| Alternar tema                | Alterna entre tema claro e escuro da interface.                     |
 | Mostrar terminal                 | Mostra/oculta o terminal embutido com logs em tempo real.           |
 
 ---
@@ -26,54 +26,27 @@ Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** 
 ## ⚙️ Requisitos
 
 - Sistema Linux com ambiente gráfico
-- Python 3.7 ou superior
 - Gerenciador de pacotes compatível: `apt`, `pacman`, `dnf` ou `zypper`
 
 ---
 
-## 🐍 Como configurar o ambiente Python
-
-Siga os passos abaixo para rodar o projeto:
-
-### 1. Crie e ative o ambiente virtual (venv):
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 2. Instale as dependências do projeto:
-
-```bash
-pip install customtkinter
-```
-
 ### 🚀 Executando o projeto
 
-## Com o ambiente virtual ativado:
+## Execultando:
 
 ```bash
 python3 painel.py
 ```
 
-### 📦 Gerando um AppImage (programa portátil para Linux)
+### 📦 Gerando um .AppImage, .Deb e .Rpm (programa portátil para Linux)
 
-Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências.
+Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências, o .Deb em distribuições baseadas do Debian e .Rpm para baseadas no Fedora.
 ## ▶️ Como gerar:
 
-##   1. Certifique-se de que seu ambiente virtual já está criado e ativado.
-
-Se não estiver criado e ativado execulte esse codigo.
+##   1. Execute o programa:
 
 ```bash
-source venv/bin/activate
-```
-
-##   2. Execute o script:
-
-```bash
-chmod +x Criar AppImage.sh
-./Criar AppImage.sh
+Compilador-x86_64.AppImage
 ```
         
 ### ✅ O que o script faz:
@@ -84,7 +57,7 @@ chmod +x Criar AppImage.sh
 
     * Gera o atalho .desktop da aplicação
 
-    * Utiliza o appimagetool para gerar um arquivo .AppImage
+    * Utiliza o Painel para gerar um arquivo .AppImage, .Deb e .rpm
 
 ### 📦 Resultado final:
 
