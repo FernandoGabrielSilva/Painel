@@ -337,9 +337,24 @@ def configurar_fish():
     install_packages "$PM"
     '''
     executar_como_root(install_script)
+    
+    # Definindo como padrão
+    '''
+    chsh -s /usr/bin/fish
+    '''
+    
+    # Oh My Fish
+    '''
+    curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install | fish
+    
+    omf install lambda
+    '''
 
     # 2. Configuração do fish (como usuário normal)
-    config_content = '''# Configurações essenciais
+    config_content = '''# Desabilita Mensagem de Bem Vindo do Fish
+set -g fish_greeting ""
+
+# Configurações essenciais
 # starship init fish | source
 alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"
 zoxide init fish | source
@@ -763,6 +778,102 @@ echo "🎉 Neofetch instalado e configurado com sucesso!"
         terminal.insert("end", f"echo '{config_content.strip()}' >> {config_file}\n")
 
     terminal.see("end")
+    
+def instalar_fastfetch():
+    script = r'''
+echo "🔍 Detectando gerenciador de pacotes..."
+detect_pm() {
+  for pm in apt pacman dnf zypper; do
+    if command -v $pm &>/dev/null; then echo $pm; return; fi
+  done
+  echo "unsupported"
+}
+
+install_neofetch() {
+  case "$1" in
+    apt) sudo apt update && sudo apt install -y fastfetch ;;
+    pacman) sudo pacman -Sy --noconfirm fastfetch ;;
+    dnf) sudo dnf install -y fastfetch ;;
+    zypper) sudo zypper install -y fastfetch ;;
+    *) echo "❌ Gerenciador não suportado. Instale o Neofetch manualmente." && exit 1 ;;
+  esac
+}
+
+if ! command -v fastfetch &>/dev/null; then
+  PM=$(detect_pm)
+  install_fastfetch "$PM"
+else
+  echo "✅ Fastfetch já está instalado."
+fi
+'''
+    executar_como_root(script)
+    
+    # 2. Configuração do fish (como usuário normal)
+    config_content = '''
+    fastfetch
+    '''
+
+    # Define os caminhos antes do try para evitar UnboundLocalError
+    home_dir = os.path.expanduser('~')
+    config_dir = os.path.join(home_dir, '.config', 'fish')
+    config_file = os.path.join(config_dir, 'config.fish')
+
+    try:
+        # Verifica se o diretório home existe
+        if not os.path.exists(home_dir):
+            raise Exception(f"Diretório home não encontrado: {home_dir}")
+        
+        # Cria diretório .config/fish com permissões corretas
+        os.makedirs(config_dir, exist_ok=True)
+        
+        # Verifica permissões
+        if not os.access(config_dir, os.W_OK):
+            raise Exception(f"Sem permissão de escrita em: {config_dir}")
+        
+        # Verifica se o conteúdo já está presente para evitar duplicação
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                existing_content = f.read()
+        else:
+            existing_content = ""
+
+        if config_content.strip() not in existing_content:
+            with open(config_file, 'a') as f:  # Modo append
+                f.write('\n' + config_content.strip() + '\n')
+        
+        # Verifica o conteúdo final
+        with open(config_file, 'r') as f:
+            final_content = f.read()
+            if config_content.strip() not in final_content:
+                raise Exception("Conteúdo não foi adicionado corretamente")
+        
+        # Mensagem de sucesso
+        terminal.insert("end", f"✅ Configuração do Neofecth concluída com sucesso!\n")
+        terminal.insert("end", f"📁 Arquivo editado: {config_file}\n")
+        terminal.insert("end", f"🔍 Conteúdo verificado com sucesso\n")
+
+    except Exception as e:
+        terminal.insert("end", f"❌ Erro ao configurar Neofecth: {str(e)}\n")
+        
+        # Fallback: Mostra comandos para executar manualmente
+        terminal.insert("end", "\n🔧 SOLUÇÃO ALTERNATIVA - Execute estes comandos manualmente:\n")
+        terminal.insert("end", f"mkdir -p {config_dir}\n")
+        terminal.insert("end", f"echo '{config_content.strip()}' >> {config_file}\n")
+
+    terminal.see("end")
+    
+def instalar_yay():
+    # 1️⃣ Primeiro instala os pacotes como root
+    install_script = '''
+    sudo pacman -S --needed git base-devel --noconfirm
+    
+    cd /tmp
+    git clone https://aur.archlinux.org/yay.git
+    
+    cd yay
+    makepkg -si --noconfirm
+    '''
+    executar_como_root(install_script)
 
 # Interface principal
 app.title("🛠️ Utilitários Linux")
@@ -790,6 +901,8 @@ botoes = [
     ("🙂 Instalar Inskscape", instalar_inkscape),
     ("💫 Instalar Krita", instalar_krita),
     ("💫 Instalar Neofecth", instalar_neofetch),
+    ("💫 Instalar Fastfecth", instalar_fastfetch),
+    ("💫 Instalar Yay", instalar_yay),
 ]
 
 for i, (texto, acao) in enumerate(botoes):
