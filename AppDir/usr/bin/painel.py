@@ -526,7 +526,7 @@ sudo pacman -S --noconfirm \
   lib32-libx11 lib32-libxext lib32-libxrandr lib32-libxinerama \
   lib32-libxcursor lib32-libxi \
   lib32-sdl2 lib32-alsa-plugins lib32-alsa-lib lib32-openal \
-  lib32-libpulse lib32-v4l-utils
+  lib32-libpulse lib32-v4l-utils lib32-glu
 
 echo "✅ Tudo instalado. Reiniciando Steam..."
 killall steam &> /dev/null
