@@ -1,73 +1,105 @@
-# 🛠️ Utilitários Linux com Interface Gráfica
+# Painel de Utilitários Linux
 
-Este projeto é uma aplicação gráfica feita com **Python 3 + CustomTkinter** que permite executar scripts úteis para configuração e manutenção de sistemas Linux. A interface oferece botões simples para tarefas administrativas, como ativar a exibição de asteriscos no `sudo`, configurar o `fsck`, instalar o `Wine`, entre outros.
+**Painel** é uma aplicação desktop standalone desenvolvida com Electron para facilitar a execução de scripts utilitários em sistemas Linux. A interface gráfica permite que usuários executem tarefas comuns de configuração e instalação de softwares com um único clique, exibindo a saída dos scripts em um terminal integrado. Alguns scripts requerem privilégios de superusuário (sudo), e a aplicação inclui uma janela para inserção de senha root quando necessário.
 
----
+## Funcionalidades
 
-## 📋 Funcionalidades
+O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botões na interface principal:
 
-| Botão                             | Ação                                                                 |
-|----------------------------------|----------------------------------------------------------------------|
-| Asteriscos no sudo            | Ativa a exibição de asteriscos ao digitar a senha no `sudo`.        |
-| Forçar fsck no boot           | Configura o sistema para verificar automaticamente o disco no boot. |
-| Configurar Fish               | Instala `fish`, `starship`, `eza`, `zoxide` e adiciona à configuração do shell. |
-| Instalar Wine                 | Instala o Wine e associa arquivos `.exe` automaticamente.            |
-| Atalho desinstalador do Wine | Cria atalho gráfico para o desinstalador de programas do Wine.     |
-| Instalar Steam | Instala a Steam via package manager (`apt`, `pacman` e `dfn`)                     |
-| Instalar GIMP | Instala o GIMP via Flatpak.                                                       |
-| Instalar Inskscape | Instala o Inkscape via Flatpak.                                              |
-| Instalar Krita | Instala o Krita via Flatpak.                                                     |
-| Instalar Neofecth                | Intala o Neofecth, personaliza e executa no terminal.                     |
-| Alternar tema                | Alterna entre tema claro e escuro da interface.                     |
-| Mostrar terminal                 | Mostra/oculta o terminal embutido com logs em tempo real.           |
+- **Ativar Asteriscos no SUDO**: Configura o terminal para exibir asteriscos ao digitar senhas com `sudo`.
+- **Forçar fsck no Boot**: Configura o sistema para executar a verificação do sistema de arquivos (`fsck`) durante a inicialização.
+- **Configurar Fish**: Instala e configura o shell Fish.
+- **Instalar Wine**: Instala o Wine para rodar aplicativos Windows no Linux.
+- **Atalho Desinstalador do Wine**: Cria um atalho para desinstalar o Wine.
+- **Instalar Steam**: Instala o cliente Steam para jogos.
+- **Steam Fix**: Aplica correções para problemas comuns no Steam.
+- **Instalar GIMP**: Instala o editor de imagens GIMP.
+- **Instalar Inkscape**: Instala o editor de gráficos vetoriais Inkscape.
+- **Instalar Krita**: Instala o software de pintura digital Krita.
+- **Instalar Neofetch**: Instala o Neofetch para exibir informações do sistema.
+- **Instalar Fastfetch**: Instala o Fastfetch, uma alternativa ao Neofetch.
+- **Instalar Yay**: Instala o Yay, um auxiliar para gerenciar pacotes AUR no Arch Linux.
 
----
+### Outras Características
+- **Terminal Integrado**: Exibe a saída dos scripts em tempo real, com opção de mostrar ou ocultar o terminal.
+- **Suporte a Scripts com Sudo**: Para scripts que requerem privilégios de superusuário, uma janela modal solicita a senha root. Se a senha estiver incorreta, a janela é reaberta com uma mensagem de erro.
+- **Interface Simples**: Interface gráfica intuitiva com botões para cada tarefa.
+- **Distribuição Multi-Formato**: Suporta geração de pacotes `AppImage`, `deb` e (opcionalmente) `rpm` para diferentes distribuições Linux.
 
-## ⚙️ Requisitos
+## Pré-requisitos
 
-- Sistema Linux com ambiente gráfico
-- Gerenciador de pacotes compatível: `apt`, `pacman`, `dnf` ou `zypper`
+- **Sistema Operacional**: Linux (testado em distribuições baseadas em Debian/Ubuntu e Arch Linux).
+- **Node.js e Yarn**: Necessários para desenvolvimento e build da aplicação.
+- **libfuse2**: Requerido para executar o `AppImage` gerado.
+  ```bash
+  sudo apt install -y libfuse2  # Ubuntu/Debian
+  sudo pacman -S fuse2         # Arch Linux
+  sudo dnf install -y fuse-libs  # Fedora
+  ```
 
----
+## Instalação
 
-### 🚀 Executando o projeto
+1. **Clone o repositório**:
+   ```bash
+   git clone https://github.com/FernandoGabrielSilva/Painel.git
+   cd Painel
+   ```
 
-## Execultando:
+2. **Instale as dependências**:
+   ```bash
+   yarn install
+   ```
 
-```bash
-python3 painel.py
-```
+3. **Inicie a aplicação em modo de desenvolvimento**:
+   ```bash
+   yarn start
+   ```
 
-### 📦 Gerando um .AppImage, .Deb e .Rpm (programa portátil para Linux)
+4. **Construa a aplicação para distribuição**:
+   ```bash
+   yarn dist
+   ```
+   Isso gerará pacotes `AppImage` e `deb` no diretório `dist/`. Para gerar pacotes `rpm`, instale o pacote `rpm`:
+   ```bash
+   sudo apt install -y rpm  # Para Ubuntu/Debian
+   sudo pacman -S rpm-tools  # Para Arch Linux
+   sudo dnf install -y rpm-build  # Fedora
+   ```
 
-Você pode transformar o projeto em um arquivo .AppImage para rodar em qualquer sistema Linux moderno, sem precisar instalar Python ou dependências, o .Deb em distribuições baseadas do Debian e .Rpm para baseadas no Fedora.
-## ▶️ Como gerar:
+5. **Execute o AppImage**:
+   ```bash
+   chmod +x dist/Painel-x86_64.AppImage
+   ./dist/Painel-x86_64.AppImage
+   ```
 
-##   1. Execute o programa:
+## Como Usar
 
-```bash
-Compilador-x86_64.AppImage
-```
-        
-### ✅ O que o script faz:
+1. Inicie a aplicação com `yarn start` ou execute o `AppImage` gerado.
+2. Na interface principal, clique em um dos botões para executar o script desejado.
+3. Para scripts que requerem `sudo` (como instalação do Wine ou Yay), uma janela será exibida solicitando a senha root.
+4. A saída do script será exibida no terminal integrado. Use o botão "Mostrar Terminal" ou "Ocultar Terminal" para controlar a visibilidade.
+5. Caso a senha root esteja incorreta, a janela de senha será reaberta com uma mensagem de erro.
 
-    * Cria a estrutura AppDir/ para empacotamento
+## Estrutura do Projeto
 
-    * Copia o interpretador Python e dependências dentro de AppDir/usr/lib
+- **`index.html`**: Interface principal com botões para executar scripts e um terminal integrado.
+- **`password.html`**: Janela modal para inserção da senha root.
+- **`main.js`**: Script principal do Electron, responsável por criar janelas, gerenciar processos e executar scripts.
+- **`renderer.js`**: Lida com a lógica da interface, incluindo a decisão de executar scripts com ou sem `sudo`.
+- **`preload.js`**: Expõe APIs seguras para comunicação entre o renderer e o processo principal.
+- **`styles.css`**: Arquivo de estilos para a interface gráfica.
+- **`scripts/`**: Diretório contendo os scripts Bash executados pela aplicação.
 
-    * Gera o atalho .desktop da aplicação
+## Notas de Desenvolvimento
 
-    * Utiliza o Painel para gerar um arquivo .AppImage, .Deb e .rpm
+- **Segurança**: A aplicação usa `contextBridge` para comunicação segura entre os processos renderer e main, evitando exposição direta de APIs do Electron.
+- **Scripts com Sudo**: Scripts que requerem privilégios de superusuário são identificados em `renderer.js` e executados com `sudo` após validação da senha.
+- **Build**: O `electron-builder` é configurado para gerar pacotes `AppImage` e `deb`. Para suportar `rpm`, instale o `rpmbuild`.
 
-### 📦 Resultado final:
+## Licença
 
-Você terá um único arquivo [.AppImage] executável e portátil, compatível com qualquer distribuição Linux moderna.
+Este projeto está licenciado sob a licença MIT.
 
-### 📄 Licença
+## Contato
 
-Este projeto é gratuito para uso pessoal, educacional e pode ser modificado livremente.
-### 🙋 Autor
-
-Desenvolvido por [FernandoGabrielSilva].
-
-Sinta-se à vontade para contribuir, modificar ou adaptar o projeto às suas necessidades!
+Desenvolvido por Fernando Gabriel Silva. Para questões ou sugestões, entre em contato via [fernandogabrielsadasilva@gmail.com](mailto:fernandogabrielsadasilva@gmail.com).

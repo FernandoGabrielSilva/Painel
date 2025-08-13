@@ -1,11 +1,14 @@
-# venv
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
-/venv
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock*
 
 # Programas
-
-Painel-x86_64.AppImage
-Painel-x86_64.deb
-Painel-x86_64.noarch.rpm
-Painel.tar.xz
-
+./dist
