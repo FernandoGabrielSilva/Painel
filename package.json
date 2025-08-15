@@ -1,6 +1,6 @@
 {
   "name": "Painel",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Painel Electron totalmente standalone para Linux",
   "main": "main.js",
   "license": "MIT",
