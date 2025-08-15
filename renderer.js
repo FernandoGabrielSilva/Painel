@@ -5,7 +5,8 @@ const sudoScripts = [
   "steam_fix.sh",
   "instalar_neofetch.sh",
   "instalar_fastfetch.sh",
-  "instalar_yay.sh"
+  "instalar_yay.sh",
+  "config_timeshift.sh"
 ];
 
 function run(script) {

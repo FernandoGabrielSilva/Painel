@@ -19,6 +19,7 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **Instalar Neofetch**: Instala o Neofetch para exibir informações do sistema.
 - **Instalar Fastfetch**: Instala o Fastfetch, uma alternativa ao Neofetch.
 - **Instalar Yay**: Instala o Yay, um auxiliar para gerenciar pacotes AUR no Arch Linux.
+- **Instalar e configurar Timeshift**: Instalar e configura o Timeshift, um auxiliar para snapshots no Arch Linux. (`Precisa do Yay instalado`)
 
 ### Outras Características
 - **Terminal Integrado**: Exibe a saída dos scripts em tempo real, com opção de mostrar ou ocultar o terminal.
