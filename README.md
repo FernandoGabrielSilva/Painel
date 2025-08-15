@@ -20,7 +20,7 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **Instalar Fastfetch**: Instala o Fastfetch, uma alternativa ao Neofetch.
 - **Instalar Yay**: Instala o Yay, um auxiliar para gerenciar pacotes AUR no Arch Linux.
 - **Instalar e configurar Timeshift**: Instala e configura o Timeshift, um auxiliador de snapshots no Arch Linux. (`Precisa do Yay instalado`)
-- **Instalar Node.js**: Instala o Node.js junto do npm, pnom e yarn.
+- **Instalar Node.js**: Instala o Node.js junto do npm, pnpm e yarn.
 
 ### Outras Características
 - **Terminal Integrado**: Exibe a saída dos scripts em tempo real, com opção de mostrar ou ocultar o terminal.
