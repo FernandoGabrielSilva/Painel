@@ -6,7 +6,8 @@ const sudoScripts = [
   "instalar_neofetch.sh",
   "instalar_fastfetch.sh",
   "instalar_yay.sh",
-  "config_timeshift.sh"
+  "config_timeshift.sh",
+  "install_node.sh"
 ];
 
 function run(script) {
