@@ -1,3 +1,5 @@
+<img src="./assets/Painel.png">
+
 # Painel de Utilitários Linux
 
 **Painel** é uma aplicação desktop standalone desenvolvida com Electron para facilitar a execução de scripts utilitários em sistemas Linux. A interface gráfica permite que usuários executem tarefas comuns de configuração e instalação de softwares com um único clique, exibindo a saída dos scripts em um terminal integrado. Alguns scripts requerem privilégios de superusuário (sudo), e a aplicação inclui uma janela para inserção de senha root quando necessário.
