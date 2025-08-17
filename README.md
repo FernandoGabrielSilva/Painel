@@ -1,4 +1,6 @@
-<img src="./assets/Painel.png">
+<div align="center">
+  <img src="./assets/Painel.png" alt="Painel" width="600">
+</div>
 
 # Painel de Utilitários Linux
 
