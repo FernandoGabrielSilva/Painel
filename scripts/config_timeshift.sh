@@ -2,9 +2,9 @@
 # =========================================
 # Configuração segura do Timeshift no Arch/CachyOS
 # - Remove Snapper/Btrfs Assistant (se existirem)
-# - Instala Timeshift (+ autosnap) e integra com GRUB (grub-btrfs)
-# - Detecção de bootloader (grub/systemd-boot/outros)
+# - Instala Timeshift (+ autosnap) e integra com GRUB ou systemd-boot
 # - Pré-snapshot Btrfs + rollback automático em caso de falha
+# - Evita refazer configurações já aplicadas
 # - Modo DRY_RUN (export DRY_RUN=1)
 # - Logs em /var/log/config_timeshift.log
 # Autor: Nandex
@@ -16,7 +16,6 @@ set -Eeuo pipefail
 LOG_FILE="/var/log/config_timeshift.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 touch "$LOG_FILE" || true
-
 exec &> >(tee -a "$LOG_FILE")
 
 ### ===== Utilidades de mensagem =====
@@ -41,41 +40,58 @@ run() {
 }
 
 need_cmd() {
-  command -v "$1" >/dev/null 2>&1 || {
-    err "Comando '$1' não encontrado."
-    return 1
-  }
+  command -v "$1" >/dev/null 2>&1 || { err "Comando '$1' não encontrado."; return 1; }
 }
 
-### ===== Segurança básica =====
+### ===== Verifica root =====
 if [[ $EUID -ne 0 ]]; then
   err "Execute como root. Use: sudo $0"
   exit 1
 fi
 ok "Permissões de root confirmadas."
 
-### ===== Verificações de ambiente =====
+### ===== Resolve SUDO_USER (fallback) =====
+# Caso o script seja executado via 'su -' sem SUDO_USER, tenta obter o usuário real.
+if [[ -z "${SUDO_USER:-}" || "${SUDO_USER:-}" == "root" ]]; then
+  REAL_USER="$(logname 2>/dev/null || who | awk '{print $1}' | head -n1 || true)"
+  if [[ -n "$REAL_USER" && "$REAL_USER" != "root" ]]; then
+    export SUDO_USER="$REAL_USER"
+    info "SUDO_USER ausente; usando usuário detectado: $SUDO_USER"
+  else
+    warn "Não foi possível determinar um usuário não-root (SUDO_USER). Algumas operações AUR podem falhar."
+  fi
+else
+  info "Executando como root via sudo; SUDO_USER=$SUDO_USER"
+fi
+
+### ===== Conectividade =====
 info "Verificando conectividade de rede..."
 if ! ping -c1 -W3 archlinux.org >/dev/null 2>&1; then
   warn "Sem resposta de archlinux.org, tentando 1.1.1.1..."
   if ! ping -c1 -W3 1.1.1.1 >/dev/null 2>&1; then
-    err "Sem conectividade com a Internet. Verifique a rede e tente novamente."
+    err "Sem conectividade com a Internet."
     exit 1
   fi
 fi
 ok "Conectividade OK."
 
+### ===== Lock do pacman =====
 info "Verificando lock do pacman..."
 if [[ -e /var/lib/pacman/db.lck ]]; then
-  err "Pacman está bloqueado (/var/lib/pacman/db.lck). Feche outras operações e remova o lock com cautela."
+  err "Pacman está bloqueado (/var/lib/pacman/db.lck). Feche outras operações."
   exit 1
 fi
 ok "Sem lock do pacman."
 
-### ===== Detectar helper AUR (fallback) =====
+### ===== Detectar helper AUR =====
 AUR_HELPER=""
 if command -v yay >/dev/null 2>&1; then AUR_HELPER="yay"; fi
 if [[ -z "$AUR_HELPER" ]] && command -v paru >/dev/null 2>&1; then AUR_HELPER="paru"; fi
+if [[ -n "$AUR_HELPER" ]]; then
+  info "AUR helper detectado: $AUR_HELPER"
+else
+  warn "Nenhum AUR helper detectado (yay/paru). Irei usar fallback manual se necessário."
+fi
 
 ### ===== Detectar bootloader =====
 BOOTLOADER="outro"
@@ -95,19 +111,20 @@ if [[ "$FSTYPE" == "btrfs" ]]; then
   IS_BTRFS=1
   ok "Partição raiz em Btrfs detectada ($ROOT_MNT)."
 else
-  warn "Raiz não é Btrfs (FSTYPE=$FSTYPE). Timeshift funciona, mas snapshots de sistema não serão Btrfs."
+  warn "Raiz não é Btrfs (FSTYPE=$FSTYPE). Snapshots Btrfs não funcionarão."
 fi
 
 ### ===== Snapshot/rollback =====
 SNAP_CREATED=0
-SNAP_TYPE=""           # "snapper" ou "btrfs"
-SNAP_ID=""             # id do snapper OU nome do subvolume de snapshot
-SNAP_PATH=""           # caminho do snapshot btrfs
+SNAP_TYPE=""
+SNAP_ID=""
+SNAP_PATH=""
+SNAP_NAME=""
 SNAP_DESC="pre-config-timeshift-$(date +%Y%m%d-%H%M%S)"
 
 create_pre_snapshot() {
   if [[ "$IS_BTRFS" -ne 1 ]]; then
-    warn "Sem Btrfs: pulando pré-snapshot de sistema."
+    warn "Sem Btrfs: pulando pré-snapshot."
     return 0
   fi
 
@@ -125,17 +142,14 @@ create_pre_snapshot() {
     return 0
   fi
 
-  # Fallback: snapshot direto via btrfs (somente do subvolume raiz)
-  need_cmd btrfs || { warn "btrfs-progs ausente; pulando pré-snapshot."; return 0; }
+  need_cmd btrfs || { warn "btrfs-progs ausente; pulando snapshot."; return 0; }
 
-  # Tentar descobrir subvolume raiz (@ ou similar)
-  ROOT_SUBVOL=$(btrfs subvolume show / 2>/dev/null | awk -F': ' '/Name:/ {print $2; exit}' || echo "/")
-  [[ -z "$ROOT_SUBVOL" ]] && ROOT_SUBVOL="@"
+  ROOT_SUBVOL=$(btrfs subvolume show / 2>/dev/null | awk -F': ' '/Name:/ {print $2; exit}' || echo "@")
   SNAP_DIR="/.snapshots"
   SNAP_NAME="${SNAP_DESC}"
   SNAP_PATH="${SNAP_DIR}/${SNAP_NAME}"
 
-  info "Criando diretório de snapshots em $SNAP_DIR (se necessário)..."
+  info "Criando diretório de snapshots em $SNAP_DIR..."
   run "mkdir -p \"$SNAP_DIR\""
 
   info "Criando snapshot somente-leitura de / em $SNAP_PATH ..."
@@ -149,50 +163,29 @@ create_pre_snapshot() {
 }
 
 rollback_on_error() {
-  # Chamado via trap ERR
   local ec=$?
   if [[ $ec -eq 0 ]]; then return 0; fi
-  err "Falha detectada (exit code $ec). Iniciando rotina de rollback..."
+  err "Falha detectada (exit code $ec). Iniciando rollback..."
 
   if [[ "$SNAP_CREATED" -eq 1 && "$IS_BTRFS" -eq 1 ]]; then
-    if [[ "$SNAP_TYPE" == "snapper" && "$SNAP_ID" != "" && "$SNAP_ID" != "DRY_RUN" ]]; then
-      warn "Rollback: será criado um snapshot de restauração e definido como default (método seguro)."
-      # Estratégia segura: criar snapshot de restore e sugerir reboot via GRUB-BTRFS
-      if command -v snapper >/dev/null 2>&1; then
-        info "Criando snapshot de recuperação (snapper)..."
-        snapper -c root create -d "rollback-from-error-$(date +%Y%m%d-%H%M%S)"
-      fi
-      warn "Se possuir grub-btrfs, gere o menu e reinicie para restaurar:"
-      echo "  grub-mkconfig -o /boot/grub/grub.cfg"
-      echo "  Reboot -> selecione o snapshot correspondente."
+    if [[ "$SNAP_TYPE" == "snapper" && "$SNAP_ID" != "DRY_RUN" ]]; then
+      warn "Rollback snapper: criar snapshot de recuperação manualmente."
+      info "  snapper -c root create -d \"rollback-from-error-$(date +%Y%m%d-%H%M%S)\""
     elif [[ "$SNAP_TYPE" == "btrfs" && -n "$SNAP_PATH" && "$SNAP_PATH" != "DRY_RUN" ]]; then
-      warn "Rollback (btrfs): será restaurado o subvolume raiz a partir de $SNAP_PATH."
-      if [[ "${DRY_RUN:-0}" == "1" ]]; then
-        echo "DRY_RUN> mount --bind / /mnt"
-        echo "DRY_RUN> btrfs subvolume snapshot \"$SNAP_PATH\" /mnt/@restore-$(date +%s)"
-        echo "DRY_RUN> # Você pode definir o subvolume default e reiniciar."
-      else
-        # Modo não-destrutivo: criar subvolume restaurado e instruir o usuário
-        mount --bind / /mnt
-        RESTORE_NAME="@restore-$(date +%s)"
-        btrfs subvolume snapshot "$SNAP_PATH" "/mnt/$RESTORE_NAME"
-        umount /mnt || true
-        warn "Snapshot restaurado em /$RESTORE_NAME."
-        warn "Para aplicar totalmente (com cuidado!):"
-        echo "  btrfs subvolume set-default \"$(btrfs subvolume list / | awk -v n=\"$RESTORE_NAME\" '$0 ~ n {print $9; exit}')\" /"
-        echo "  reboot"
+      # tentar descobrir o nome do snapshot/subvolume
+      local found
+      found=$(btrfs subvolume list / 2>/dev/null | awk -v pfx="$(basename "$SNAP_PATH")" '$0 ~ pfx {print $9; exit}')
+      if [[ -z "$found" ]]; then
+        found=""
       fi
+      warn "Rollback Btrfs: configurar subvolume default manualmente:"
+      echo "  btrfs subvolume set-default \"$found\" /"
+      echo "  reboot"
+      echo "" | tee -a "$LOG_FILE"
+      echo "Sugestão salva no log: btrfs subvolume set-default \"$found\" /" >> "$LOG_FILE"
     fi
   else
-    warn "Nenhum pré-snapshot disponível para rollback de sistema."
-    warn "Tentando reverter alterações de pacotes (melhor-esforço)..."
-    # Reinstalar o que foi removido, remover o que foi instalado
-    if pacman -Qi snapper >/dev/null 2>&1; then
-      :
-    else
-      info "Reinstalando snapper e btrfs-assistant (se possível)..."
-      run "pacman -S --noconfirm snapper btrfs-assistant || true"
-    fi
+    warn "Nenhum snapshot disponível para rollback automático."
   fi
 
   err "Saindo com erro. Veja o log em $LOG_FILE."
@@ -201,103 +194,135 @@ rollback_on_error() {
 
 trap rollback_on_error ERR
 
-### ===== Início da execução =====
-info "Iniciando rotina segura (log em $LOG_FILE). DRY_RUN=${DRY_RUN:-0}"
-
-# Pré-snapshot (se possível)
+### ===== Execução principal =====
+info "Iniciando rotina segura (log em $LOG_FILE) DRY_RUN=${DRY_RUN:-0}"
 create_pre_snapshot
 
-### ===== Remover Snapper e Btrfs-assistant =====
-info "Removendo snapper e btrfs-assistant (se instalados)..."
-run "pacman -Rns --noconfirm snapper btrfs-assistant || true"
-ok "Etapa de remoção concluída."
-
-### ===== Instalar Timeshift =====
-info "Instalando Timeshift..."
-# Preferir repositório oficial
-if pacman -Si timeshift >/dev/null 2>&1; then
-  run "pacman -S --noconfirm timeshift"
-  ok "Timeshift instalado dos repositórios oficiais."
+### ===== Remover Snapper e Btrfs-assistant se existirem =====
+info "Verificando snapper e btrfs-assistant..."
+if pacman -Qi snapper >/dev/null 2>&1 || pacman -Qi btrfs-assistant >/dev/null 2>&1; then
+  run "pacman -Rns --noconfirm snapper btrfs-assistant || true"
+  ok "Snapper/Btrfs-assistant removidos."
 else
-  if [[ -n "$AUR_HELPER" ]]; then
-    info "Timeshift não encontrado nos repositórios. Tentando via AUR com $AUR_HELPER..."
-    run "$AUR_HELPER -S --noconfirm timeshift"
-    ok "Timeshift instalado via AUR."
-  else
-    err "Timeshift não encontrado e nenhum helper AUR disponível."
-    exit 1
-  fi
+  ok "Snapper e btrfs-assistant não instalados; pulando remoção."
 fi
 
-### ===== Ativar cronie =====
-info "Ativando e iniciando cronie..."
-run "systemctl enable cronie --now"
-ok "cronie ativo."
+### ===== Instalar Timeshift apenas se não estiver =====
+if pacman -Qi timeshift >/dev/null 2>&1; then
+  ok "Timeshift já instalado; pulando instalação."
+else
+  info "Instalando Timeshift..."
+  if pacman -Si timeshift >/dev/null 2>&1; then
+    run "pacman -S --noconfirm timeshift"
+  elif [[ -n "$AUR_HELPER" && -n "${SUDO_USER:-}" ]]; then
+    info "Timeshift não nos repositórios. Instalando via AUR usando $AUR_HELPER..."
+    # roda como usuário normal para evitar erros do AUR helper
+    run "sudo -u $SUDO_USER $AUR_HELPER -S --needed --noconfirm timeshift"
+  else
+    err "Timeshift não encontrado e nenhum AUR helper disponível."
+    exit 1
+  fi
+  ok "Timeshift instalado."
+fi
 
-### ===== Integrar com GRUB (se GRUB) =====
+### ===== Cronie =====
+if systemctl is-enabled cronie >/dev/null 2>&1; then
+  ok "cronie já habilitado."
+else
+  info "Habilitando cronie..."
+  run "systemctl enable --now cronie"
+  ok "cronie ativo."
+fi
+
+### ===== Bootloader =====
 if [[ "$BOOTLOADER" == "grub" ]]; then
-  info "Instalando grub-btrfs e inotify-tools..."
-  run "pacman -S --noconfirm grub-btrfs inotify-tools"
-
-  info "Habilitando grub-btrfsd..."
+  info "Configurando grub-btrfs..."
+  if ! pacman -Qi grub-btrfs >/dev/null 2>&1; then
+    run "pacman -S --noconfirm grub-btrfs inotify-tools"
+  fi
   run "systemctl enable --now grub-btrfsd"
-
-  info "Regenerando configuração do GRUB..."
   if [[ -x /usr/bin/grub-mkconfig ]]; then
     run "grub-mkconfig -o /boot/grub/grub.cfg"
     ok "Configuração do GRUB regenerada."
-  else
-    warn "grub-mkconfig não encontrado; pulei regeneração automática."
   fi
-
-  info "Status do grub-btrfsd (resumo):"
-  run "systemctl --no-pager --full status grub-btrfsd || true"
 else
-  warn "Bootloader não é GRUB: pulando instalação de grub-btrfs."
-  if [[ "$BOOTLOADER" == "systemd-boot" ]]; then
-    info "Dica: em systemd-boot, use timeshift + timeshift-autosnap, mas entrará manualmente se precisar restaurar."
-  fi
+  info "Bootloader systemd-boot detectado. Snapshots serão restaurados manualmente:"
+  echo "  btrfs subvolume set-default <snapshot> /"
+  echo "  reboot"
 fi
 
-### ===== Instalar timeshift-autosnap =====
-info "Instalando timeshift-autosnap..."
-# Em algumas distros está em repositório; em outras, na AUR
-if pacman -Si timeshift-autosnap >/dev/null 2>&1; then
-  run "pacman -S --noconfirm timeshift-autosnap"
+### ===== Timeshift-autosnap =====
+if command -v timeshift-autosnap >/dev/null 2>&1; then
+  ok "timeshift-autosnap já instalado; pulando."
 else
-  if [[ -n "$AUR_HELPER" ]]; then
-    run "$AUR_HELPER -S --noconfirm timeshift-autosnap"
-  else
-    warn "timeshift-autosnap não está nos repositórios e não há AUR helper; pulando."
+  info "Instalando timeshift-autosnap (tentativa).
+  1) Tentar AUR helper ($AUR_HELPER) como usuário normal
+  2) Se falhar ou não existir, fallback para build manual (git+makepkg) como usuário normal."
+  installed=0
+
+  # 1) tentar AUR helper (se disponível)
+  if [[ -n "$AUR_HELPER" && -n "${SUDO_USER:-}" ]]; then
+    info "Tentando instalar via $AUR_HELPER (como $SUDO_USER)..."
+    if run "$AUR_HELPER -S --needed --noconfirm timeshift-autosnap"; then
+      ok "timeshift-autosnap instalado via $AUR_HELPER."
+      installed=1
+    else
+      warn "$AUR_HELPER falhou ou exigiu interação; prosseguindo para fallback manual."
+    fi
+  fi
+
+  # 2) fallback manual: clone + makepkg como usuário normal + pacman -U como root
+  if [[ "$installed" -eq 0 ]]; then
+    if [[ -z "${SUDO_USER:-}" ]]; then
+      warn "Usuário normal não detectado; não posso construir pacotes AUR em modo não-root. Pulando instalação."
+    else
+      TMP_BUILD_DIR="/tmp/timeshift-autosnap-build"
+      run "rm -rf \"$TMP_BUILD_DIR\""
+      run "mkdir -p \"$TMP_BUILD_DIR\""
+      # garantia que o diretório seja de propriedade do usuário normal para git/makepkg
+      run "chown -R $SUDO_USER:$SUDO_USER \"$TMP_BUILD_DIR\""
+
+      info "Clonando AUR para $TMP_BUILD_DIR como $SUDO_USER..."
+      if run "sudo -u $SUDO_USER git clone https://aur.archlinux.org/timeshift-autosnap.git \"$TMP_BUILD_DIR\""; then
+        info "Clonagem concluída. Construindo pacote (.pkg.tar.zst) como $SUDO_USER (sem instalar automaticamente)..."
+        # construir pacote (não instalar) para evitar prompts sudo interativos
+        if run "cd \"$TMP_BUILD_DIR\" && sudo -u $SUDO_USER makepkg --skippgpcheck -f"; then
+          # localizar arquivo de pacote
+          PKG_FILE="$(ls "$TMP_BUILD_DIR"/*.pkg.tar.* 2>/dev/null | head -n1 || true)"
+          if [[ -n "$PKG_FILE" ]]; then
+            info "Pacote construído: $PKG_FILE. Instalando como root..."
+            run "pacman -U --noconfirm \"$PKG_FILE\""
+            ok "timeshift-autosnap instalado via build manual."
+            installed=1
+          else
+            warn "Pacote não encontrado após makepkg; verifique $TMP_BUILD_DIR."
+          fi
+        else
+          warn "makepkg falhou no diretório $TMP_BUILD_DIR."
+        fi
+      else
+        warn "Clonagem AUR falhou."
+      fi
+    fi
+  fi
+
+  if [[ "$installed" -eq 0 ]]; then
+    warn "Não foi possível instalar timeshift-autosnap automaticamente; você pode instalar manualmente."
   fi
 fi
-ok "timeshift-autosnap: etapa concluída (instalado ou ignorado)."
+ok "Timeshift-autosnap: etapa concluída."
 
-### ===== Validações pós-instalação =====
-info "Validando instalações..."
-need_cmd timeshift && ok "Timeshift disponível."
-systemctl is-enabled cronie >/dev/null 2>&1 && ok "cronie habilitado."
-systemctl is-active cronie >/dev/null 2>&1 && ok "cronie ativo."
-
-if [[ "$BOOTLOADER" == "grub" ]]; then
-  pacman -Qi grub-btrfs >/dev/null 2>&1 && ok "grub-btrfs instalado."
-  systemctl is-active grub-btrfsd >/dev/null 2>&1 && ok "grub-btrfsd ativo."
-fi
-
-### ===== Sucesso =====
-ok "Configuração concluída com sucesso! 🚀"
+### ===== Validações finais =====
+need_cmd timeshift && ok "Timeshift disponível." || warn "timeshift não encontrado."
+systemctl is-active cronie >/dev/null 2>&1 && ok "cronie ativo." || warn "cronie não ativo."
 
 if [[ "$IS_BTRFS" -eq 1 && "$SNAP_CREATED" -eq 1 ]]; then
-  info "Mantendo o pré-snapshot criado para segurança:"
-  if [[ "$SNAP_TYPE" == "snapper" ]]; then
-    echo "  snapper -c root list | grep \"$SNAP_DESC\"   # para consultar"
-  else
-    echo "  ls -l \"$SNAP_PATH\"                         # para consultar"
-  fi
-  info "Se tudo estiver ok após alguns dias, você pode remover esse snapshot para liberar espaço."
+  info "Pré-snapshot mantido em segurança:"
+  [[ "$SNAP_TYPE" == "snapper" ]] && echo "  snapper -c root list | grep \"$SNAP_DESC\""
+  [[ "$SNAP_TYPE" == "btrfs" ]] && echo "  ls -l \"$SNAP_PATH\""
 fi
 
 echo
 info "Log completo em: $LOG_FILE"
-echo
+ok "Configuração concluída com sucesso! 🚀"
 
