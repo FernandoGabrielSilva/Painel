@@ -96,8 +96,6 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **`preload.js`**: Expõe APIs seguras para comunicação entre o renderer e o processo principal.
 - **`styles.css`**: Arquivo de estilos para a interface gráfica.
 - **`scripts/`**: Diretório contendo os scripts Bash executados pela aplicação.
-- **`scripts.json`**: Lista de scripts disponíveis e suas informações para a interface.
-- **`enable-pacman-candy.sh`**: Script para habilitar o Pac-Man (ILoveCandy) no `pacman.conf`.
 
 ## Notas de Desenvolvimento
 
