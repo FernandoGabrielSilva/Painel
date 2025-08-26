@@ -1,4 +1,4 @@
-[
+{ "title": "Habilitar Pac-Man no Pacman", "script": "enable-pacman-candy.sh" },[
   { "title": "Ativar Asteriscos no SUDO", "script": "ativar_asteriscos.sh" },
   { "title": "Forçar fsck no boot", "script": "configurar_fsck.sh" },
   { "title": "Configurar Fish", "script": "configurar_fish.sh" },
@@ -14,5 +14,5 @@
   { "title": "Instalar Yay", "script": "instalar_yay.sh" },
   { "title": "Instalar e configurar Timeshift", "script": "config_timeshift.sh" },
   { "title": "Instalar Node.js", "script": "install_node.sh" },
-  { "title": "Habilitar o Pac-Man Candy", "script": "enable-pacman-candy" },
+  { "title": "Habilitar Pac-Man no Pacman", "script": "enable-pacman-candy.sh" },
 ]
