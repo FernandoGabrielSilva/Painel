@@ -1,5 +1,3 @@
-const buttonGroup = document.getElementById('button-group');
-
 const sudoScripts = [
   "ativar_asteriscos.sh",
   "configurar_fish.sh",
@@ -13,19 +11,6 @@ const sudoScripts = [
   "install_node.sh",
   "enable-pacman-candy.sh"
 ];
-
-// Carrega o JSON com fetch
-fetch('scripts.json')
-  .then(response => response.json())
-  .then(scripts => {
-    scripts.map(item => {
-      const btn = document.createElement('button');
-      btn.textContent = item.title;
-      btn.onclick = () => run(item.script);
-      buttonGroup.appendChild(btn);
-    });
-  })
-  .catch(err => console.error("Erro ao carregar scripts.json:", err));
 
 function run(script) {
   document.getElementById("output").textContent = "";
