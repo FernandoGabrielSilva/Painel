@@ -29,7 +29,7 @@ sudo pacman -Syu --noconfirm || { msg_error "Falha ao atualizar o sistema."; exi
 
 # === Instala Node.js LTS e npm ===
 msg_info "Instalando Node.js LTS e npm..."
-if sudo pacman -S --needed --noconfirm nodejs-lts-hydrogen npm; then
+if sudo pacman -S --needed --noconfirm nodejs-lts npm; then
     msg_ok "Node.js e npm instalados com sucesso."
 else
     msg_error "Falha ao instalar Node.js/npm."
