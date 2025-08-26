@@ -1,14 +1,23 @@
 #!/bin/bash
-echo "Verificando se o arquivo /etc/sudoers.d/pwfeedback existe..."
 
 FILE="/etc/sudoers.d/pwfeedback"
-if [[ -f "$FILE" ]]; then
-  echo "⚠️ O arquivo '$FILE' já existe. Conteúdo atual:"
-  cat "$FILE"
-else
-  echo "Criando o arquivo para ativar os asteriscos no sudo..."
-  echo "Defaults        pwfeedback" > "$FILE"
+
+echo "Verificando o arquivo '$FILE'..."
+
+# Cria o arquivo se não existir
+if [[ ! -f "$FILE" ]]; then
+  echo "Criando o arquivo '$FILE'..."
+  touch "$FILE"
   chmod 440 "$FILE"
-  echo "✅ Asteriscos ativados com sucesso no sudo."
 fi
+
+# Verifica se a linha já existe
+if grep -qx "Defaults        pwfeedback" "$FILE"; then
+  echo "A linha 'Defaults        pwfeedback' já existe no arquivo."
+else
+  echo "Adicionando 'Defaults        pwfeedback' ao arquivo..."
+  echo "Defaults        pwfeedback" >> "$FILE"
+fi
+
+echo "✅ Configuração de asteriscos no sudo concluída."
 
