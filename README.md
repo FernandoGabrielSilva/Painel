@@ -25,6 +25,7 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **Instalar Yay**: Instala o Yay, um auxiliar para gerenciar pacotes AUR no Arch Linux.
 - **Instalar e configurar Timeshift**: Instala e configura o Timeshift, um auxiliador de snapshots no Arch Linux. (`Precisa do Yay instalado`)
 - **Instalar Node.js**: Instala o Node.js junto do npm, pnpm e yarn.
+- **Habilitar Pac-Man no Pacman**: Ativa a animação ILoveCandy no `pacman.conf` (`enable-pacman-candy.sh`).
 
 ### Outras Características
 - **Terminal Integrado**: Exibe a saída dos scripts em tempo real, com opção de mostrar ou ocultar o terminal.
@@ -39,7 +40,7 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **libfuse2**: Requerido para executar o `AppImage` gerado.
   ```bash
   sudo apt install -y libfuse2  # Ubuntu/Debian
-  sudo pacman -S fuse2         # Arch Linux
+  sudo pacman -S fuse2           # Arch Linux
   sudo dnf install -y fuse-libs  # Fedora
   ```
 
@@ -95,6 +96,8 @@ O **Painel** oferece as seguintes funcionalidades, acessíveis por meio de botõ
 - **`preload.js`**: Expõe APIs seguras para comunicação entre o renderer e o processo principal.
 - **`styles.css`**: Arquivo de estilos para a interface gráfica.
 - **`scripts/`**: Diretório contendo os scripts Bash executados pela aplicação.
+- **`scripts.json`**: Lista de scripts disponíveis e suas informações para a interface.
+- **`enable-pacman-candy.sh`**: Script para habilitar o Pac-Man (ILoveCandy) no `pacman.conf`.
 
 ## Notas de Desenvolvimento
 
@@ -109,3 +112,4 @@ Este projeto está licenciado sob a licença MIT.
 ## Contato
 
 Desenvolvido por Fernando Gabriel Silva. Para questões ou sugestões, entre em contato via [fernandogabrielsadasilva@gmail.com](mailto:fernandogabrielsadasilva@gmail.com).
+
