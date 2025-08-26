@@ -5,7 +5,9 @@ const os = require("os");
 const { spawn, exec } = require("child_process");
 
 let mainWindow;
+let sessionSudoPassword = null; // senha da sessão (temporária)
 
+// ------------------ FUNÇÃO PRINCIPAL ------------------
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 850,
@@ -17,17 +19,19 @@ function createWindow() {
   });
 
   mainWindow.loadFile("index.html");
-  
+
+  // Resize global
   ipcMain.on("resize-window", (event, { width, height }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.setContentSize(width, height);
   });
 }
 
+// ------------------ MODAL DE SENHA ------------------
 function createPasswordWindow(scriptName, errorMessage = "") {
   const passWin = new BrowserWindow({
     width: 450,
-    height: 250,
+    height: 295,
     parent: mainWindow,
     modal: true,
     autoHideMenuBar: true,
@@ -38,33 +42,28 @@ function createPasswordWindow(scriptName, errorMessage = "") {
 
   passWin.loadFile("password.html", { query: { error: errorMessage } });
 
-  ipcMain.once("password-submitted", (event, password) => {
+  // Listener temporário que remove após uso
+  const listener = (event, { password, remember }) => {
+    if (remember) {
+      sessionSudoPassword = password;
+    }
     runScriptWithSudo(scriptName, password);
     passWin.close();
-  });
-  
-  ipcMain.on("resize-window", (event, { width, height }) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) win.setContentSize(width, height);
-  });
+    ipcMain.removeListener("password-submitted", listener);
+  };
+
+  ipcMain.on("password-submitted", listener);
 }
 
-app.whenReady().then(createWindow);
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
-
-// ------------------ FUNÇÃO AUXILIAR PARA LIDAR COM ASAR ------------------
+// ------------------ FUNÇÃO AUXILIAR PARA ASAR ------------------
 function getExecutableScript(scriptName) {
   let scriptPath = path.join(__dirname, "scripts", scriptName);
 
-  // Se estiver dentro de um ASAR, copia para /tmp
   if (scriptPath.includes(".asar")) {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "painel-"));
     const tempScript = path.join(tempDir, scriptName);
     fs.copyFileSync(scriptPath, tempScript);
-    fs.chmodSync(tempScript, 0o755); // garante permissão de execução
+    fs.chmodSync(tempScript, 0o755);
     scriptPath = tempScript;
   } else {
     fs.chmodSync(scriptPath, 0o755);
@@ -93,12 +92,19 @@ ipcMain.on("run-script", (event, scriptName) => {
 
 // ------------------ SCRIPT COM SUDO ------------------
 ipcMain.on("request-sudo", (event, scriptName) => {
-  createPasswordWindow(scriptName);
+  if (sessionSudoPassword) {
+    // Se já tem senha na sessão, roda direto
+    runScriptWithSudo(scriptName, sessionSudoPassword);
+  } else {
+    // Senão, abre modal
+    createPasswordWindow(scriptName);
+  }
 });
 
 function runScriptWithSudo(scriptName, password) {
   const scriptPath = getExecutableScript(scriptName);
 
+  // Testa senha
   exec(`echo "${password}" | sudo -S -k true`, (err) => {
     if (err) {
       createPasswordWindow(scriptName, "Senha incorreta, tente novamente.");
@@ -121,4 +127,11 @@ function runScriptWithSudo(scriptName, password) {
     });
   });
 }
+
+// ------------------ EVENTOS DO APP ------------------
+app.whenReady().then(createWindow);
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
 
