@@ -1,0 +1,18 @@
+[
+  { "title": "Ativar Asteriscos no SUDO", "script": "ativar_asteriscos.sh" },
+  { "title": "Forçar fsck no boot", "script": "configurar_fsck.sh" },
+  { "title": "Configurar Fish", "script": "configurar_fish.sh" },
+  { "title": "Instalar Wine", "script": "instalar_wine.sh" },
+  { "title": "Atalho desinstalador do Wine", "script": "criar_atalho_desinstalador_wine.sh" },
+  { "title": "Instalar Steam", "script": "instalar_steam.sh" },
+  { "title": "Steam Fix", "script": "steam_fix.sh" },
+  { "title": "Instalar GIMP", "script": "instalar_gimp.sh" },
+  { "title": "Instalar Inkscape", "script": "instalar_inkscape.sh" },
+  { "title": "Instalar Krita", "script": "instalar_krita.sh" },
+  { "title": "Instalar Neofetch", "script": "instalar_neofetch.sh" },
+  { "title": "Instalar Fastfetch", "script": "instalar_fastfetch.sh" },
+  { "title": "Instalar Yay", "script": "instalar_yay.sh" },
+  { "title": "Instalar e configurar Timeshift", "script": "config_timeshift.sh" },
+  { "title": "Instalar Node.js", "script": "install_node.sh" },
+  { "title": "Habilitar o Pac-Man Candy", "script": "enable-pacman-candy" },
+]

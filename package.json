@@ -21,7 +21,10 @@
       "icon": "assets/app.png",
       "artifactName": "${productName}-${arch}.${ext}",
       "maintainer": "Fernando Gabriel Silva <fernandogabrielsadasilva@gmail.com>"
-    }
+    },
+    "asarUnpack": [
+      "resources/app.asar/scripts/**"
+    ]
   },
   "devDependencies": {
     "electron": "^31.0.0",
