@@ -245,10 +245,75 @@ if [[ "$BOOTLOADER" == "grub" ]]; then
     run "grub-mkconfig -o /boot/grub/grub.cfg"
     ok "Configuração do GRUB regenerada."
   fi
+elif [[ "$BOOTLOADER" == "systemd-boot" ]]; then
+  info "Configurando systemd-boot para snapshots Btrfs..."
+  
+  # Verificar se é Btrfs
+  if [[ "$IS_BTRFS" -ne 1 ]]; then
+    warn "Sistema não está em Btrfs; snapshots não suportados no systemd-boot."
+  else
+    # Diretório de snapshots do Timeshift e entradas do systemd-boot
+    TIMEShift_SNAP_DIR="/.snapshots"
+    LOADER_ENTRIES_DIR="/boot/loader/entries"
+    
+    # Obter informações do kernel e initramfs
+    KERNEL=$(find /boot -maxdepth 1 -name 'vmlinuz*' | head -n1)
+    INITRD=$(find /boot -maxdepth 1 -name 'initramfs*.img' | head -n1)
+    ROOT_DEVICE=$(findmnt -n -o SOURCE / | sed 's/\[.*\]//') # Remover [/@] da saída
+    ROOT_SUBVOL=$(btrfs subvolume show / 2>/dev/null | awk -F': ' '/Name:/ {print $2; exit}' || echo "@")
+
+    if [[ -z "$KERNEL" || -z "$INITRD" ]]; then
+      err "Kernel ou initramfs não encontrados em /boot; pulando configuração de entradas."
+    else
+      # Criar diretório para entradas do systemd-boot, se não existir
+      run "mkdir -p \"$LOADER_ENTRIES_DIR\""
+
+      # Limpar entradas de snapshots inexistentes
+      for entry in "$LOADER_ENTRIES_DIR"/timeshift-snapshot-*.conf; do
+        if [[ -f "$entry" ]]; then
+          snap_name=$(basename "$entry" | sed 's/timeshift-snapshot-//;s/\.conf//')
+          if [[ ! -d "$TIMEShift_SNAP_DIR/$snap_name" ]]; then
+            info "Removendo entrada de boot para snapshot inexistente: $snap_name"
+            run "rm -f \"$entry\""
+          fi
+        fi
+      done
+
+      # Iterar sobre snapshots do Timeshift
+      for snap in "$TIMEShift_SNAP_DIR"/*; do
+        if [[ -d "$snap" && "$snap" != "$TIMEShift_SNAP_DIR" ]]; then
+          SNAP_NAME=$(basename "$snap")
+          ENTRY_FILE="$LOADER_ENTRIES_DIR/timeshift-snapshot-$SNAP_NAME.conf"
+
+          # Evitar sobrescrever entradas existentes
+          if [[ -f "$ENTRY_FILE" ]]; then
+            info "Entrada para snapshot $SNAP_NAME já existe; pulando."
+            continue
+          fi
+
+          # Gerar entrada de boot para o snapshot
+          info "Criando entrada de boot para snapshot $SNAP_NAME..."
+          SNAP_SUBVOL="$ROOT_SUBVOL/snapshots/$SNAP_NAME"
+          ENTRY_CONTENT=$(cat << EOF
+title Timeshift Snapshot $SNAP_NAME
+linux $(basename "$KERNEL")
+initrd $(basename "$INITRD")
+options root=$ROOT_DEVICE rootflags=subvol=$SNAP_SUBVOL rw
+EOF
+)
+          if [[ "${DRY_RUN:-0}" == "1" ]]; then
+            echo "DRY_RUN> Criando entrada: $ENTRY_FILE"
+            echo "$ENTRY_CONTENT"
+          else
+            echo "$ENTRY_CONTENT" > "$ENTRY_FILE"
+            ok "Entrada de boot criada para snapshot $SNAP_NAME."
+          fi
+        fi
+      done
+    fi
+  fi
 else
-  info "Bootloader systemd-boot detectado. Snapshots serão restaurados manualmente:"
-  echo "  btrfs subvolume set-default <snapshot> /"
-  echo "  reboot"
+  warn "Bootloader não suportado para integração automática de snapshots."
 fi
 
 ### ===== Timeshift-autosnap =====
