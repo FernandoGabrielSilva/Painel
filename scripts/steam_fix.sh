@@ -20,9 +20,5 @@ fi
 echo "Instalando bibliotecas 32 bits essenciais para jogos..."
 sudo pacman -S --noconfirm lib32-glibc lib32-gcc-libs lib32-libx11 lib32-libxext lib32-libxrandr lib32-libxinerama lib32-libxcursor lib32-libxi lib32-sdl2 lib32-alsa-plugins lib32-alsa-lib lib32-openal lib32-libpulse lib32-v4l-utils lib32-glu
 
-echo "Reiniciando Steam..."
-killall steam &> /dev/null
-steam &
-
 echo "✅ Correções aplicadas para Steam e drivers GPU."
 
