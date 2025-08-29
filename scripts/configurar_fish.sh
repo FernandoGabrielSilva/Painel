@@ -78,7 +78,7 @@ add_config_line() {
 
 add_config_line 'set -g fish_greeting ""'
 add_config_line 'alias ls="eza --color=always --long --git --no-filesize --icons=always --no-time --no-user --no-permissions"'
-add_config_line 'zoxide init fish | source'
+add_config_line '#zoxide init fish | source'
 
 # Garantir que o usuário real tenha permissão total na pasta
 chown -R "$REAL_USER":"$REAL_USER" "$CONFIG_DIR"
