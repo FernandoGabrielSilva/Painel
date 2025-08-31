@@ -5,7 +5,7 @@ const os = require("os");
 const { spawn, exec } = require("child_process");
 
 let mainWindow;
-let sessionSudoPassword = null; // senha da sessão (temporária)
+let sessionSudoPassword = null;
 
 // ------------------ FUNÇÃO PRINCIPAL ------------------
 function createWindow() {
@@ -20,7 +20,6 @@ function createWindow() {
 
   mainWindow.loadFile("index.html");
 
-  // Resize global
   ipcMain.on("resize-window", (event, { width, height }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.setContentSize(width, height);
@@ -42,7 +41,6 @@ function createPasswordWindow(scriptName, errorMessage = "") {
 
   passWin.loadFile("password.html", { query: { error: errorMessage } });
 
-  // Listener temporário que remove após uso
   const listener = (event, { password, remember }) => {
     if (remember) {
       sessionSudoPassword = password;
@@ -55,7 +53,7 @@ function createPasswordWindow(scriptName, errorMessage = "") {
   ipcMain.on("password-submitted", listener);
 }
 
-// ------------------ FUNÇÃO AUXILIAR PARA ASAR ------------------
+// ------------------ FUNÇÃO AUXILIAR ------------------
 function getExecutableScript(scriptName) {
   let scriptPath = path.join(__dirname, "scripts", scriptName);
 
@@ -93,10 +91,8 @@ ipcMain.on("run-script", (event, scriptName) => {
 // ------------------ SCRIPT COM SUDO ------------------
 ipcMain.on("request-sudo", (event, scriptName) => {
   if (sessionSudoPassword) {
-    // Se já tem senha na sessão, roda direto
     runScriptWithSudo(scriptName, sessionSudoPassword);
   } else {
-    // Senão, abre modal
     createPasswordWindow(scriptName);
   }
 });
@@ -111,8 +107,9 @@ function runScriptWithSudo(scriptName, password) {
       return;
     }
 
-    const command = `echo "${password}" | sudo -S bash "${scriptPath}"`;
-    const proc = exec(command);
+    // Aqui executamos scripts que exigem sudo apenas para instalação, mas makepkg roda como usuário
+    const command = `bash "${scriptPath}" "${password}"`;
+    const proc = spawn(command, { shell: true });
 
     proc.stdout.on("data", (data) => {
       mainWindow.webContents.send("script-output", data.toString());
@@ -134,4 +131,3 @@ app.whenReady().then(createWindow);
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
-

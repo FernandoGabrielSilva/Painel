@@ -1,36 +1,38 @@
-#!/bin/bash
+#!/usr/bin/env bash
+PASSWORD="$1"
+set -e
 
-echo "Instalando dependências base para compilar pacotes AUR..."
-sudo pacman -S --needed git base-devel --noconfirm
+# Função para rodar sudo com senha direto
+run_sudo() {
+  printf "%s\n" "$PASSWORD" | sudo -S "$@"
+}
 
-echo "Clonando repositório do yay na pasta /tmp..."
-cd /tmp || exit 1
+echo "[INFO] Validando permissões de superusuário..."
+printf "%s\n" "$PASSWORD" | sudo -S -v
 
-if [ -d "yay" ]; then
-    echo "Diretório /tmp/yay já existe. Removendo..."
-    rm -rf yay
-fi
+echo "[INFO] Removendo lock do pacman (se existir)..."
+run_sudo rm -f /var/lib/pacman/db.lck
 
-git clone https://aur.archlinux.org/yay.git || { echo "Erro ao clonar yay."; exit 1; }
+echo "[INFO] Instalando dependências necessárias..."
+run_sudo pacman -Syu --needed --noconfirm git base-devel
 
-# Muda a propriedade da pasta para o usuário comum
-chown -R "$SUDO_USER":"$SUDO_USER" /tmp/yay
+YAY_DIR="/tmp/yay"
 
-echo "Compilando yay como usuário normal..."
-sudo -u "$SUDO_USER" bash -c '
-    cd /tmp/yay || exit 1
-    makepkg -s --noconfirm || { echo "Erro ao compilar yay."; exit 1; }
-'
-
-# Pega o caminho do pacote gerado
-PKG_FILE=$(find /tmp/yay -name "*.pkg.tar.zst" | head -n 1)
-
-if [ -f "$PKG_FILE" ]; then
-    echo "Instalando yay como root com pacman -U..."
-    sudo pacman -U --noconfirm "$PKG_FILE" || { echo "❌ Falha ao instalar o pacote yay."; exit 1; }
-    echo "✅ yay instalado com sucesso!"
+if [ -d "$YAY_DIR" ]; then
+    echo "[INFO] Diretório $YAY_DIR já existe, atualizando repositório..."
+    cd "$YAY_DIR"
+    git pull
 else
-    echo "❌ Pacote .pkg.tar.zst não encontrado. Instalação abortada."
-    exit 1
+    echo "[INFO] Clonando repositório do Yay..."
+    git clone https://aur.archlinux.org/yay.git "$YAY_DIR"
+    cd "$YAY_DIR"
 fi
+
+echo "[INFO] Compilando Yay..."
+makepkg -s --noconfirm
+
+echo "[INFO] Instalando Yay..."
+run_sudo pacman -U --noconfirm *.pkg.tar.zst
+
+echo "[INFO] Yay instalado com sucesso!"
 
